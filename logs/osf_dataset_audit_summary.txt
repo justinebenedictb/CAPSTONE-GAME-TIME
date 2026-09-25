@@ -1,0 +1,26 @@
+CAPSTONE OSF DATASET AUDIT
+======================================================================
+Manifest: c:\Users\admin\Desktop\CAPSTONE GAME TIME\manifest file\run_activities_manifest.csv
+OSF Project: 6hfpz
+Provider: osfstorage
+
+MANIFEST
+Total manifest rows: 24,960
+Unique (id, file) pairs: 24,948
+Duplicate manifest rows: 12
+Unique athlete ids: 572
+Unique activity filenames: 23,112
+
+OSF ZIP MATCHING
+ZIP records discovered: 6,616
+Required pairs with MATCHED ZIP: 23,323
+Required pairs with MISSING ZIP: 1,625
+Required pairs with AMBIGUOUS ZIP: 0
+Unique athletes with MATCHED ZIP: 540
+
+DOWNLOAD STATUS
+NO ZIP FILES WERE DOWNLOADED.
+NO ACTIVITY CSV FILES WERE EXTRACTED.
+
+NEXT STEP:
+Review osf_dataset_audit.csv before starting the downloader.

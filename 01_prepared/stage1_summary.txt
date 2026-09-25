@@ -1,0 +1,60 @@
+CAPSTONE - STAGE 1 DATA PREPARATION SUMMARY
+============================================================
+
+Manifest source: C:\Users\admin\Desktop\CAPSTONE GAME TIME\manifest file\run_activities_manifest.csv
+Granular root: C:\Users\admin\Desktop\CAPSTONE GAME TIME\00_raw\granular
+
+FILTERING
+------------------------------------------------------------
+Required sport: Run
+Required signature: TDS-HC-AGL----R
+Filtered activities: 24,965
+Unique athletes: 573
+
+GRANULAR FILES
+------------------------------------------------------------
+Valid granular files: 23,323
+Granular issues: 1,642
+
+DAILY TIMELINE
+------------------------------------------------------------
+Daily rows: 205,567
+Activity days: 22,834
+Rest days: 182,733
+
+STANDARD-DISTANCE TARGETS
+------------------------------------------------------------
+5.0 km targets: 18,549
+10.0 km targets: 9,159
+15.0 km targets: 2,984
+21.1 km targets: 1,039
+42.2 km targets: 170
+
+28-DAY WINDOWS
+------------------------------------------------------------
+Complete target-anchored windows: 28,444
+
+Window definition:
+28 consecutive calendar days ending on a
+standard-distance target observation.
+
+TARGET DISTANCES
+------------------------------------------------------------
+5.0 km
+10.0 km
+15.0 km
+21.1 km
+42.2 km
+
+GRANULAR SCHEMA
+------------------------------------------------------------
+secs = elapsed seconds
+km = cumulative distance in kilometers
+power = power
+hr = heart rate
+cad = cadence
+alt = altitude
+
+STATUS
+------------------------------------------------------------
+Stage 1 preparation completed.

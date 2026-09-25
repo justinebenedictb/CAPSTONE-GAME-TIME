@@ -1,0 +1,22 @@
+CAPSTONE OSF DATASET DOWNLOAD SUMMARY
+======================================================================
+
+Total manifest activity pairs: 24,948
+Pairs with matched ZIP: 23,323
+Pairs with missing ZIP: 1,625
+
+EXTRACTION
+Successfully extracted: 23,323
+Already present / skipped: 0
+Failed extraction/download: 0
+Not attempted: 0
+
+Granular output directory:
+c:\Users\admin\Desktop\CAPSTONE GAME TIME\00_raw\granular
+
+Detailed tracking:
+c:\Users\admin\Desktop\CAPSTONE GAME TIME\logs\download_audit.csv
+
+NOTE:
+Missing ZIPs are retained in the audit and are NOT silently discarded.
+They will need to be investigated separately before final dataset preparation.
