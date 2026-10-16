@@ -1,0 +1,32 @@
+feature,level,unit,definition
+is_activity_day,daily,0/1,"1 if at least one run that day, else 0 (rest day)"
+run_count,daily,count,Number of runs that day
+distance_km,daily,km,Total running distance that day
+max_run_km,daily,km,Longest single run that day
+moving_time_min,daily,min,Total moving time (Stage 1 moving-time clock)
+effort_km,daily,km,ITRA effort distance: distance + elevation gain / 100
+ga_speed_kmh,daily,km/h,Grade-adjusted speed: effort_km / moving time; 0 on rest days
+hr_pct_max,daily,fraction,Time-weighted mean HR as a fraction of the athlete's causal HRmax; 0 on rest days
+trimp,daily,a.u.,Zone-weighted HR TRIMP: sum over zones of minutes x weight (0.2/0.4/0.6/1.0/1.5)
+atl,daily,a.u.,Acute training load: 7-day rolling mean of daily TRIMP
+ctl,daily,a.u.,Chronic training load: 28-day rolling mean of daily TRIMP
+acwr,daily,ratio,ATL / CTL; missing if < 4 run days in the 28-day chronic window
+acwr_valid,daily,0/1,1 if acwr is defined
+acwr_km,daily,ratio,"Distance-based ACWR (7-day / 28-day mean km), for the alert framework"
+acwr_zone,daily,code,"0 Under-training (<0.8), 1 Sweet Spot (0.8-1.3), 2 Monitoring (1.3-1.5), 3 Danger (>=1.5)"
+days_since_previous_activity,daily,days,Days since the previous run
+rpc,target,0-1,Running Performance Coefficient = 1571 s / Riegel 10K-equivalent of the best effort that day
+target_distance_km,target,km,Standard distance of the best effort used for the RPC
+target_seconds,target,s,Best-effort time at that distance (for back-conversion and evaluation)
+atl / ctl / acwr / acwr_km / acwr_zone,sample,-,Value on the day before the target
+danger_days_28,sample,days,Days with ACWR >= 1.5 in the 28 days up to the day before the target
+run_days_7 / run_days_28,sample,days,Run days in the last 7 / 28 days before the target
+km_7 / km_28,sample,km,Distance in the last 7 / 28 days before the target
+longest_run_km_28,sample,km,Longest single run in the 28-day window
+mean_ga_speed_28,sample,km/h,Grade-adjusted speed over all running in the 28-day window
+mean_hr_pct_28,sample,fraction,Mean daily %HRmax over run days in the window
+days_since_last_run,sample,days,Days between the last run and the day before the target
+last_rpc,sample,0-1,Most recent RPC before the target day (any earlier best effort)
+best_rpc_90,sample,0-1,Best RPC in the 90 days before the target day
+days_since_last_target,sample,days,Days since that most recent earlier best effort
+has_prior_rpc,sample,0/1,1 if the athlete has any earlier best effort

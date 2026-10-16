@@ -1,0 +1,45 @@
+CAPSTONE - STAGE 3 FEATURE ENGINEERING SUMMARY
+============================================================
+
+RUN-LEVEL FEATURES
+------------------------------------------------------------
+Real runs: 24,807
+TRIMP from granular HR: 23,133
+TRIMP estimated from average HR (no granular HR): 1,661
+TRIMP missing: 13
+HRmax: causal running max of per-run 99th-percentile HR; population default 181.0 bpm before an athlete's first HR run (1,627 runs)
+Zones (%HRmax, weight): z1 >= 0% x0.2, z2 >= 65% x0.4, z3 >= 80% x0.6, z4 >= 89% x1.0, z5 >= 97% x1.5
+Elevation imputed (missing or > 100 m/km) from athlete's earlier median climb/km: 2,266
+Per-run p99 HR above 210 bpm ignored for HRmax (sensor artefact): 107
+Samples with no runs in their 28-day window (kept): 581
+
+DAILY SEQUENCE
+------------------------------------------------------------
+Daily rows: 203,822 | athletes: 569
+ATL = 7-day mean TRIMP, CTL = 28-day mean TRIMP, ACWR = ATL / CTL
+ACWR valid only with >= 4 run days in the chronic window
+RNN sequence features (14): is_activity_day, run_count, distance_km, moving_time_min, effort_km, ga_speed_kmh, hr_pct_max, trimp, atl, ctl, acwr, acwr_valid, acwr_km, days_since_previous_activity
+
+TARGET (RPC)
+------------------------------------------------------------
+RPC = 1571 s / (best-effort time x (10 / distance)^1.06)
+Per-distance windows from Stage 1: 27,545
+Samples (one per athlete per target day): 16,020
+Dropped RPC > 1: 6
+Dropped insufficient chronic history: 1,140
+Samples kept: 14,874 | athletes: 329
+Athletes with >= 10 samples: 216
+RPC median 0.491, 1-99%: 0.272-0.664
+Best-effort distance used: 5.0 km 9,661, 10.0 km 3,735, 15.0 km 1,007, 21.1 km 452, 42.2 km 19
+Samples with a prior RPC: 14,847
+
+LEAKAGE GUARDS
+------------------------------------------------------------
+Window = 28 days before the target day (target day excluded).
+HRmax and elevation fill use only the athlete's earlier runs.
+Prior-RPC features use only best efforts strictly before the target day.
+Split, scaling and feature selection are left to the modelling stage (training data only).
+
+STATUS
+------------------------------------------------------------
+Stage 3 feature engineering completed.

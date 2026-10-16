@@ -1,0 +1,6 @@
+target_distance_km,before_raw_candidates,after_kept,dropped_distance_reset,dropped_distance_mismatch,dropped_insufficient_data,dropped_not_reached_clean,dropped_pace_out_of_range,dropped_not_a_run,dropped_total
+5.0,18549,18213,131,3,0,0,196,6,336
+10.0,9159,8935,68,2,0,0,147,7,224
+15.0,2984,2831,22,0,0,0,114,17,153
+21.1,1039,905,16,0,0,0,101,17,134
+42.2,170,69,5,0,0,0,56,40,101

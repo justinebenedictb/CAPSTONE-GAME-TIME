@@ -18,25 +18,50 @@ Granular issues: 1,642
 
 DAILY TIMELINE
 ------------------------------------------------------------
-Daily rows: 205,567
-Activity days: 22,834
-Rest days: 182,733
+Daily rows: 203,822
+Activity days: 22,735
+Rest days: 181,087
 
 STANDARD-DISTANCE TARGETS
 ------------------------------------------------------------
-5.0 km targets: 18,549
-10.0 km targets: 9,159
-15.0 km targets: 2,984
-21.1 km targets: 1,039
-42.2 km targets: 170
+5.0 km targets: 18,213
+10.0 km targets: 8,935
+15.0 km targets: 2,831
+21.1 km targets: 905
+42.2 km targets: 69
+
+TARGET QUALITY CONTROL (before -> after)
+------------------------------------------------------------
+Moving time: sample gaps > 30s credited at the activity's typical pace
+Pace bounds: 150-900 s/km
+Distance reset tolerance: 0.05 km
+Granular vs manifest distance tolerance: 5%
+
+5.0 km: 18,549 -> 18,213 (reset 131.0, mismatch 3.0, insufficient 0.0, not reached 0.0, pace 196.0, not a run 6.0)
+10.0 km: 9,159 -> 8,935 (reset 68.0, mismatch 2.0, insufficient 0.0, not reached 0.0, pace 147.0, not a run 7.0)
+15.0 km: 2,984 -> 2,831 (reset 22.0, mismatch 0.0, insufficient 0.0, not reached 0.0, pace 114.0, not a run 17.0)
+21.1 km: 1,039 -> 905 (reset 16.0, mismatch 0.0, insufficient 0.0, not reached 0.0, pace 101.0, not a run 17.0)
+42.2 km: 170 -> 69 (reset 5.0, mismatch 0.0, insufficient 0.0, not reached 0.0, pace 56.0, not a run 40.0)
+
+ACTIVITY FEATURE CLEANING
+------------------------------------------------------------
+workout_time from granular moving time: 23,157
+workout_time set to NaN (implausible manifest value, no granular): 23
+elevation_gain set to NaN (> 200 m/km): 504
+Suspected non-runs (> 18 km/h moving), excluded from targets and daily timeline: 158
+average_speed derived as total_distance / moving time (manifest value kept as average_speed_raw).
+Raw manifest values kept as workout_time_raw / elevation_gain_raw.
 
 28-DAY WINDOWS
 ------------------------------------------------------------
-Complete target-anchored windows: 28,444
+Complete target-anchored windows: 27,545
 
 Window definition:
-28 consecutive calendar days ending on a
-standard-distance target observation.
+28 consecutive calendar days ending the day BEFORE a
+standard-distance target observation (target day excluded).
+
+Targets = fastest continuous segment of each standard
+distance within an activity (best effort, moving time).
 
 TARGET DISTANCES
 ------------------------------------------------------------
@@ -48,7 +73,7 @@ TARGET DISTANCES
 
 GRANULAR SCHEMA
 ------------------------------------------------------------
-secs = elapsed seconds
+secs = elapsed seconds (targets use moving time, see QC)
 km = cumulative distance in kilometers
 power = power
 hr = heart rate
