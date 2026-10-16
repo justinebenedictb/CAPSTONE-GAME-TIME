@@ -1,4 +1,4 @@
-"""
+r"""
 03_stage1_data_preparation.py
 
 CAPSTONE
@@ -27,7 +27,7 @@ Confirmed granular schema:
     alt
 
 Project root:
-    "C:\\Users\\admin\\Desktop\\CAPSTONE GAME TIME"
+    C:\Users\admin\Desktop\CAPSTONE GAME TIME
 """
 
 from pathlib import Path
@@ -64,6 +64,19 @@ STANDARD_DISTANCES = {
 }
 
 WINDOW_DAYS = 28
+
+# Target quality controls
+MAX_SAMPLE_GAP_SEC = 30          # longer gaps = pause / clock jump, not running time
+MIN_PACE_SEC_PER_KM = 150        # 2:30 /km, faster is implausible
+MAX_PACE_SEC_PER_KM = 900        # 15:00 /km, slower is walking / not a performance
+MAX_DISTANCE_RESET_KM = 0.05     # km dropping more than this = counter reset / merged file
+MAX_DISTANCE_MISMATCH = 0.05     # granular max km vs manifest total_distance (relative)
+
+TARGET_STATUS_OK = "OK"
+
+# Activity-level manifest feature checks
+MAX_ELEVATION_GAIN_PER_KM = 200  # m/km; above this the barometer/GPS value is treated as junk
+MAX_RUN_SPEED_KMH = 18           # whole-activity moving speed above this = mislabelled ride, not a run
 
 # Confirmed granular schema
 GRANULAR_REQUIRED_COLUMNS = [
@@ -258,100 +271,75 @@ def load_and_filter_manifest():
 # 2. PARSE STANDARD-DISTANCE TARGETS
 # ============================================================
 
-def interpolate_target_time(granular, target_km):
+def clean_distance_series(granular):
     """
-    Find elapsed time at a target distance.
+    Order samples by time and build a monotonic distance and a
+    moving-time clock.
 
-    Uses:
-        secs = elapsed seconds
-        km   = cumulative distance in kilometers
+    - Samples are sorted by `secs` (time order), never by `km`.
+    - Small backward GPS jitter in `km` is removed with a running max.
+    - Gaps between samples longer than MAX_SAMPLE_GAP_SEC are treated
+      as pauses / clock jumps: they are credited only the time needed to
+      cover that gap's distance at the activity's own typical pace.
 
-    If the target distance falls between two observations,
-    linearly interpolate elapsed time.
+    Returns (km_monotonic, moving_secs) as numpy arrays, or None.
+    """
+
+    work = granular[["secs", "km"]].dropna()
+    work = work[(work["secs"] >= 0) & (work["km"] >= 0)]
+    work = (
+        work.sort_values("secs")
+        .drop_duplicates("secs")
+        .reset_index(drop=True)
+    )
+
+    if len(work) < 2:
+        return None
+
+    km = work["km"].cummax().to_numpy()
+    dt = np.diff(work["secs"].to_numpy(), prepend=work["secs"].iloc[0])
+    dkm = np.diff(km, prepend=km[0])
+
+    normal = dt <= MAX_SAMPLE_GAP_SEC
+    normal_km = dkm[normal].sum()
+
+    if normal_km <= 0:
+        return None
+
+    typical_sec_per_km = dt[normal].sum() / normal_km
+    credited = np.where(
+        normal,
+        dt,
+        np.minimum(dt, dkm * typical_sec_per_km)
+    )
+
+    return km, np.cumsum(credited)
+
+
+def interpolate_target_time(km, moving_secs, target_km):
+    """
+    Fastest moving time over any continuous `target_km` segment of the
+    activity (best effort), not the time from the start.
+
+    For every sample as a start point, the time at start_km + target_km
+    is linearly interpolated; the shortest duration wins.
 
     Returns:
         float seconds, or NaN if target distance was not reached.
     """
 
-    work = granular[["secs", "km"]].copy()
-
-    work["secs"] = clean_numeric(work["secs"])
-    work["km"] = clean_numeric(work["km"])
-
-    work = work.dropna(subset=["secs", "km"])
-
-    if work.empty:
+    if km[-1] - km[0] < target_km:
         return np.nan
 
-    work = work.sort_values("km").reset_index(drop=True)
+    # Interpolation grid: first time each distance is reached
+    # (on a stop, distance plateaus; the run resumes from the last plateau sample).
+    grid_km, first_idx = np.unique(km, return_index=True)
+    grid_t = moving_secs[first_idx]
 
-    # Remove impossible negative values
-    work = work[
-        (work["secs"] >= 0) &
-        (work["km"] >= 0)
-    ].copy()
+    starts = km + target_km <= km[-1]
+    end_t = np.interp(km[starts] + target_km, grid_km, grid_t)
 
-    if work.empty:
-        return np.nan
-
-    # Collapse duplicate distance values by keeping the
-    # earliest elapsed time.
-    work = (
-        work.groupby("km", as_index=False)["secs"]
-        .min()
-        .sort_values("km")
-        .reset_index(drop=True)
-    )
-
-    max_distance = work["km"].max()
-
-    if max_distance < target_km:
-        return np.nan
-
-    # Exact observation exists
-    exact = work.loc[
-        np.isclose(work["km"], target_km, atol=1e-9)
-    ]
-
-    if not exact.empty:
-        return float(exact.iloc[0]["secs"])
-
-    # First observation beyond target
-    upper_idx = work["km"].searchsorted(
-        target_km,
-        side="left"
-    )
-
-    if upper_idx <= 0:
-        return np.nan
-
-    if upper_idx >= len(work):
-        return np.nan
-
-    lower = work.iloc[upper_idx - 1]
-    upper = work.iloc[upper_idx]
-
-    x1 = float(lower["km"])
-    y1 = float(lower["secs"])
-
-    x2 = float(upper["km"])
-    y2 = float(upper["secs"])
-
-    if x2 <= x1:
-        return np.nan
-
-    # Linear interpolation
-    fraction = (
-        (target_km - x1) /
-        (x2 - x1)
-    )
-
-    target_seconds = (
-        y1 +
-        fraction * (y2 - y1)
-    )
-
-    return float(target_seconds)
+    return float(np.min(end_t - moving_secs[starts]))
 
 
 def parse_standard_distance_targets(activity_row):
@@ -376,6 +364,7 @@ def parse_standard_distance_targets(activity_row):
         "granular_status": "OK",
         "granular_rows": np.nan,
         "granular_max_km": np.nan,
+        "granular_moving_time": np.nan,
     }
 
     # Initialize target fields
@@ -386,6 +375,11 @@ def parse_standard_distance_targets(activity_row):
 
         result[
             f"target_{distance_label.replace('.', '_')}km_time"
+        ] = np.nan
+
+        # NaN = never a candidate (raw distance never reached target)
+        result[
+            f"target_{distance_label.replace('.', '_')}km_status"
         ] = np.nan
 
     if not granular_path.exists():
@@ -440,26 +434,75 @@ def parse_standard_distance_targets(activity_row):
     result["granular_max_km"] = valid_distance.max()
 
     # --------------------------------------------------------
+    # File-level quality checks
+    # --------------------------------------------------------
+
+    raw_max_km = result["granular_max_km"]
+
+    km_drops = -granular["km"].dropna().diff()
+    file_problem = None
+
+    if (km_drops > MAX_DISTANCE_RESET_KM).any():
+        file_problem = "DISTANCE_RESET"
+
+    manifest_km = pd.to_numeric(
+        activity_row.get("total_distance"), errors="coerce"
+    )
+
+    if (
+        file_problem is None
+        and pd.notna(manifest_km)
+        and manifest_km > 0
+        and abs(raw_max_km - manifest_km) / manifest_km
+        > MAX_DISTANCE_MISMATCH
+    ):
+        file_problem = "DISTANCE_MISMATCH"
+
+    cleaned = None if file_problem else clean_distance_series(granular)
+
+    if file_problem is None and cleaned is None:
+        file_problem = "INSUFFICIENT_DATA"
+
+    if cleaned is not None:
+        result["granular_moving_time"] = float(cleaned[1][-1])
+
+    # --------------------------------------------------------
     # Extract standard-distance targets
     # --------------------------------------------------------
 
     for distance_label, target_km in STANDARD_DISTANCES.items():
 
-        target_seconds = interpolate_target_time(
-            granular,
-            target_km
-        )
-
         key = (
             f"target_{distance_label.replace('.', '_')}km"
         )
 
-        result[f"{key}_sec"] = target_seconds
-        result[f"{key}_time"] = (
-            format_seconds(target_seconds)
-            if not pd.isna(target_seconds)
-            else np.nan
+        # Only activities the old (raw) logic would have counted
+        # are candidates; this keeps a before/after audit.
+        if raw_max_km < target_km:
+            continue
+
+        if file_problem:
+            result[f"{key}_status"] = file_problem
+            continue
+
+        target_seconds = interpolate_target_time(
+            *cleaned,
+            target_km
         )
+
+        if pd.isna(target_seconds):
+            result[f"{key}_status"] = "NOT_REACHED_CLEAN"
+            continue
+
+        pace = target_seconds / target_km
+
+        if not (MIN_PACE_SEC_PER_KM <= pace <= MAX_PACE_SEC_PER_KM):
+            result[f"{key}_status"] = "PACE_OUT_OF_RANGE"
+            continue
+
+        result[f"{key}_status"] = TARGET_STATUS_OK
+        result[f"{key}_sec"] = target_seconds
+        result[f"{key}_time"] = format_seconds(target_seconds)
 
     return result
 
@@ -535,6 +578,58 @@ def build_activity_index(manifest, target_df):
         validate="one_to_one"
     )
 
+    # --------------------------------------------------------
+    # Clean manifest training-load fields (raw kept for audit)
+    # --------------------------------------------------------
+
+    distance = clean_numeric(activity["total_distance"])
+
+    raw_time = clean_numeric(activity["workout_time"])
+    activity["workout_time_raw"] = raw_time
+    raw_pace = raw_time / distance
+    # Prefer granular moving time; else keep manifest time only if its pace is plausible.
+    activity["workout_time"] = activity["granular_moving_time"].where(
+        activity["granular_moving_time"].notna(),
+        raw_time.where(
+            raw_pace.between(MIN_PACE_SEC_PER_KM, MAX_PACE_SEC_PER_KM)
+        )
+    )
+
+    raw_elev = clean_numeric(activity["elevation_gain"])
+    activity["elevation_gain_raw"] = raw_elev
+    activity["elevation_gain"] = raw_elev.where(
+        raw_elev / distance <= MAX_ELEVATION_GAIN_PER_KM
+    )
+
+    print(
+        f"workout_time: {activity['granular_moving_time'].notna().sum():,} from granular moving time, "
+        f"{(activity['workout_time'].isna() & raw_time.notna()).sum():,} implausible manifest values set to NaN"
+    )
+    print(
+        f"elevation_gain: {(activity['elevation_gain'].isna() & raw_elev.notna()).sum():,} "
+        f"values > {MAX_ELEVATION_GAIN_PER_KM} m/km set to NaN"
+    )
+
+    # Mislabelled rides: kept in the index for audit, but no targets and
+    # excluded from the daily timeline (see build_daily_timeline).
+    moving_speed_kmh = distance / (activity["workout_time"] / 3600)
+    activity["suspected_non_run"] = moving_speed_kmh > MAX_RUN_SPEED_KMH
+
+    # Manifest average_speed is corrupt for some runs (up to 233 km/h); derive it instead.
+    activity["average_speed_raw"] = clean_numeric(activity["average_speed"])
+    activity["average_speed"] = moving_speed_kmh
+
+    for distance_label in STANDARD_DISTANCES:
+        key = f"target_{distance_label.replace('.', '_')}km"
+        hit = activity["suspected_non_run"] & activity[f"{key}_status"].eq(TARGET_STATUS_OK)
+        activity.loc[hit, f"{key}_status"] = "NOT_A_RUN"
+        activity.loc[hit, [f"{key}_sec", f"{key}_time"]] = np.nan
+
+    print(
+        f"suspected non-runs (> {MAX_RUN_SPEED_KMH} km/h moving): "
+        f"{int(activity['suspected_non_run'].sum()):,} activities excluded"
+    )
+
     # Ensure chronological ordering
     activity = activity.sort_values(
         ["id", "datetime_utc", "file"]
@@ -568,6 +663,8 @@ def build_daily_timeline(activity):
     print("=" * 70)
 
     daily_records = []
+
+    activity = activity[~activity["suspected_non_run"]].copy()
 
     # Numeric manifest columns that may represent
     # activity-level training measurements.
@@ -658,8 +755,10 @@ def build_daily_timeline(activity):
 
             for col in available_sum:
                 if is_activity_day:
+                    # min_count=1: an activity day with no valid value stays NaN, not 0
                     row[col] = day_activities[col].sum(
-                        skipna=True
+                        skipna=True,
+                        min_count=1
                     )
                 else:
                     row[col] = 0.0
@@ -795,8 +894,8 @@ def build_28day_windows(daily):
 
     Therefore:
 
-        window_start = target_date - 27 days
-        window_end   = target_date
+        window_start = target_date - 28 days
+        window_end   = target_date - 1 day
 
     This ensures each future modeling sample has a defined
     28-day history ending on the target observation date.
@@ -862,12 +961,17 @@ def build_28day_windows(daily):
                 target_date
             )
 
+            # Window = the 28 days BEFORE the target day; the target
+            # run itself must not appear in its own input features.
             window_start = (
                 target_timestamp -
-                pd.Timedelta(days=WINDOW_DAYS - 1)
+                pd.Timedelta(days=WINDOW_DAYS)
             ).date()
 
-            window_end = target_date
+            window_end = (
+                target_timestamp -
+                pd.Timedelta(days=1)
+            ).date()
 
             # Need the full 28 calendar days available
             expected_days = pd.date_range(
@@ -1059,6 +1163,55 @@ def build_missing_activity_audit(activity):
 # 7. SUMMARY
 # ============================================================
 
+def build_target_quality_audit(activity):
+    """
+    Before/after counts per target distance.
+    before = activities whose raw distance reached the target
+             (what the previous, unchecked logic counted)
+    after  = targets that passed every quality check
+    """
+
+    rows = []
+
+    for distance_label in STANDARD_DISTANCES:
+
+        status = activity[
+            f"target_{distance_label.replace('.', '_')}km_status"
+        ]
+
+        counts = status.value_counts()
+
+        row = {
+            "target_distance_km": float(distance_label),
+            "before_raw_candidates": int(status.notna().sum()),
+            "after_kept": int(counts.get(TARGET_STATUS_OK, 0)),
+        }
+
+        for reason in [
+            "DISTANCE_RESET",
+            "DISTANCE_MISMATCH",
+            "INSUFFICIENT_DATA",
+            "NOT_REACHED_CLEAN",
+            "PACE_OUT_OF_RANGE",
+            "NOT_A_RUN",
+        ]:
+            row[f"dropped_{reason.lower()}"] = int(counts.get(reason, 0))
+
+        row["dropped_total"] = (
+            row["before_raw_candidates"] - row["after_kept"]
+        )
+
+        rows.append(row)
+
+    audit = pd.DataFrame(rows)
+
+    # Self-check: every candidate is either kept or has a drop reason
+    reason_cols = [c for c in audit.columns if c.startswith("dropped_") and c != "dropped_total"]
+    assert (audit[reason_cols].sum(axis=1) == audit["dropped_total"]).all()
+
+    return audit
+
+
 def write_summary(
     activity,
     daily,
@@ -1126,15 +1279,60 @@ def write_summary(
             f"{available:,}"
         )
 
+    audit = build_target_quality_audit(activity)
+
+    audit.to_csv(
+        OUTPUT_DIR / "stage1_target_quality_audit.csv",
+        index=False
+    )
+
     summary_lines.extend([
+        "",
+        "TARGET QUALITY CONTROL (before -> after)",
+        "-" * 60,
+        f"Moving time: sample gaps > {MAX_SAMPLE_GAP_SEC}s credited at the activity's typical pace",
+        f"Pace bounds: {MIN_PACE_SEC_PER_KM}-{MAX_PACE_SEC_PER_KM} s/km",
+        f"Distance reset tolerance: {MAX_DISTANCE_RESET_KM} km",
+        f"Granular vs manifest distance tolerance: {MAX_DISTANCE_MISMATCH:.0%}",
+        "",
+    ])
+
+    for _, r in audit.iterrows():
+        summary_lines.append(
+            f"{r['target_distance_km']:.1f} km: "
+            f"{int(r['before_raw_candidates']):,} -> {int(r['after_kept']):,} "
+            f"(reset {r['dropped_distance_reset']}, "
+            f"mismatch {r['dropped_distance_mismatch']}, "
+            f"insufficient {r['dropped_insufficient_data']}, "
+            f"not reached {r['dropped_not_reached_clean']}, "
+            f"pace {r['dropped_pace_out_of_range']}, "
+            f"not a run {r['dropped_not_a_run']})"
+        )
+
+    summary_lines.extend([
+        "",
+        "ACTIVITY FEATURE CLEANING",
+        "-" * 60,
+        f"workout_time from granular moving time: {int(activity['granular_moving_time'].notna().sum()):,}",
+        f"workout_time set to NaN (implausible manifest value, no granular): "
+        f"{int((activity['workout_time'].isna() & activity['workout_time_raw'].notna()).sum()):,}",
+        f"elevation_gain set to NaN (> {MAX_ELEVATION_GAIN_PER_KM} m/km): "
+        f"{int((activity['elevation_gain'].isna() & activity['elevation_gain_raw'].notna()).sum()):,}",
+        f"Suspected non-runs (> {MAX_RUN_SPEED_KMH} km/h moving), excluded from targets and daily timeline: "
+        f"{int(activity['suspected_non_run'].sum()):,}",
+        "average_speed derived as total_distance / moving time (manifest value kept as average_speed_raw).",
+        "Raw manifest values kept as workout_time_raw / elevation_gain_raw.",
         "",
         "28-DAY WINDOWS",
         "-" * 60,
         f"Complete target-anchored windows: {len(windows):,}",
         "",
         "Window definition:",
-        "28 consecutive calendar days ending on a",
-        "standard-distance target observation.",
+        "28 consecutive calendar days ending the day BEFORE a",
+        "standard-distance target observation (target day excluded).",
+        "",
+        "Targets = fastest continuous segment of each standard",
+        "distance within an activity (best effort, moving time).",
         "",
         "TARGET DISTANCES",
         "-" * 60,
@@ -1146,7 +1344,7 @@ def write_summary(
         "",
         "GRANULAR SCHEMA",
         "-" * 60,
-        "secs = elapsed seconds",
+        "secs = elapsed seconds (targets use moving time, see QC)",
         "km = cumulative distance in kilometers",
         "power = power",
         "hr = heart rate",
