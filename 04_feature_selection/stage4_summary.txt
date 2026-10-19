@@ -1,0 +1,85 @@
+CAPSTONE - STAGE 4 SPLITTING AND FEATURE SELECTION SUMMARY
+============================================================
+
+SPLIT (per athlete, chronological, by target date)
+------------------------------------------------------------
+Rule: 70% train / 10% validation / 20% test; athletes with < 10 samples -> training only; every validation/test target date is later than all of that athlete's training targets
+train        samples 10,431   athletes  329
+val          samples  1,353   athletes  216
+test         samples  3,090   athletes  216
+
+Best-effort distance mix (samples):
+target_distance_km  5.0   10.0  15.0  21.1  42.2
+split                                           
+test                2034   769   196    83     8
+train               6771  2622   711   317    10
+val                  856   344   100    52     1
+
+PREPARATION (fitted on training data only)
+------------------------------------------------------------
+Caps (training 99th percentile): days_since_last_run <= 148, days_since_last_target <= 191
+ACWR / acwr_km missing -> 1.0 (neutral), flagged by acwr_valid
+Other missing -> training median + flag: mean_ga_speed_28, mean_hr_pct_28, last_rpc, best_rpc_90, days_since_last_target, prior_mean_rpc
+Excluded from inputs (identifiers / target information): id, sample_id, target_date, window_start, window_end, rpc, target_seconds, target_distance_km
+
+FILTER METHOD - CORRELATION
+------------------------------------------------------------
+Candidates: 28 | screened out: none
+Spearman |r| >= 0.85 treated as redundant; 11 pair(s):
+  days_since_last_target_missing ~ prior_mean_rpc_missing (r = 1.00): drop prior_mean_rpc_missing - days_since_last_target_missing ranks higher (see priority rule)
+  last_rpc_missing ~ days_since_last_target_missing (r = 1.00): drop days_since_last_target_missing - last_rpc_missing ranks higher (see priority rule)
+  has_prior_rpc ~ last_rpc_missing (r = -1.00): drop last_rpc_missing - has_prior_rpc ranks higher (see priority rule)
+  mean_ga_speed_28_missing ~ mean_hr_pct_28_missing (r = 1.00): drop mean_hr_pct_28_missing - mean_ga_speed_28_missing ranks higher (see priority rule)
+  acwr ~ acwr_km (r = 0.95): drop acwr_km - acwr is a core study variable
+  ctl ~ km_28 (r = 0.95): drop km_28 - ctl is a core study variable
+  atl ~ km_7 (r = 0.94): drop km_7 - atl is a core study variable
+  acwr_zone ~ acwr_km_zone (r = 0.91): drop acwr_zone - acwr_km_zone ranks higher (see priority rule)
+  ctl ~ run_days_28 (r = 0.88): drop run_days_28 - ctl is a core study variable
+  acwr ~ acwr_km_zone (r = 0.88): drop acwr_km_zone - acwr is a core study variable
+  atl ~ run_days_7 (r = 0.87): drop run_days_7 - atl is a core study variable
+After correlation filter: 17 features
+Highest VIF after filter: days_since_last_target 9.1, ctl 8.7, atl 8.2, best_rpc_90_missing 7.0, days_since_last_run 5.0
+
+TREE-BASED IMPORTANCE (XGBoost, fixed untuned settings, athlete-weighted, 5 seeds)
+------------------------------------------------------------
+Rank  Feature                      Perm. importance (mean +/- SD)   Gain    Selected
+   1  prior_mean_rpc                 0.01926 +/- 0.00044       0.260   yes
+   2  last_rpc                       0.00199 +/- 0.00043       0.168   yes
+   3  mean_ga_speed_28               0.00124 +/- 0.00015       0.055   yes
+   4  best_rpc_90                    0.00118 +/- 0.00012       0.065   yes
+   5  mean_hr_pct_28                 0.00035 +/- 0.00008       0.021   yes
+   6  ctl                            0.00029 +/- 0.00005       0.025   yes
+   7  longest_run_km_28              0.00021 +/- 0.00018       0.032   yes
+   8  atl                            0.00011 +/- 0.00008       0.025   yes
+   9  mean_ga_speed_28_missing       0.00001 +/- 0.00000       0.033   yes
+  10  has_prior_rpc                  0.00000 +/- 0.00000       0.083   no
+  11  acwr                          -0.00001 +/- 0.00005       0.016   design
+  12  days_since_last_target        -0.00001 +/- 0.00008       0.035   no
+  13  best_rpc_90_missing           -0.00005 +/- 0.00005       0.051   no
+  14  acwr_valid                    -0.00007 +/- 0.00005       0.037   no
+  15  prior_rpc_count               -0.00015 +/- 0.00005       0.033   no
+  16  days_since_last_run           -0.00021 +/- 0.00005       0.038   no
+  17  danger_days_28                -0.00031 +/- 0.00005       0.023   no
+
+SELECTION CHECK (validation, athlete-weighted MAE in RPC units)
+------------------------------------------------------------
+All 17 post-filter features: 0.03898
+Selected 10 features:         0.03884
+Decision: use the selected set
+
+FINAL TABULAR FEATURES (XGBoost) - 10:
+  prior_mean_rpc, last_rpc, mean_ga_speed_28, best_rpc_90, mean_hr_pct_28, ctl, longest_run_km_28, atl, mean_ga_speed_28_missing, acwr
+
+FINAL SEQUENCE FEATURES (GRU / LSTM) - 11, input shape (N, 28, 11):
+  is_activity_day, trimp, atl, ctl, acwr, acwr_valid, effort_km, ga_speed_kmh, hr_pct_max, run_count, days_since_previous_activity
+  (redundancy checked on 14,924 training-period run days; 3 redundant pair(s), see stage4_sequence_redundancy_decisions.csv)
+
+LEAKAGE GUARDS
+------------------------------------------------------------
+Split done before any selection; all fitting uses training data only.
+Validation set used only to score importance and the selection check; test set untouched.
+Per athlete, every validation/test sample is later in time than all training samples (checked).
+
+STATUS
+------------------------------------------------------------
+Stage 4 splitting and feature selection completed.

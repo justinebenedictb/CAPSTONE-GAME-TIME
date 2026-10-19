@@ -1,4 +1,4 @@
-r"""
+"""
 05_stage3_feature_engineering.py
 
 CAPSTONE
@@ -53,7 +53,7 @@ import pandas as pd
 # CONFIGURATION
 # ============================================================
 
-ROOT = Path(r"C:\Users\admin\Desktop\CAPSTONE GAME TIME")
+ROOT = Path(r"C:\Users\ACER\Desktop\CAPSTONE GAME TIME")
 
 PREPARED_DIR = ROOT / "01_prepared"
 GRANULAR_ROOT = ROOT / "00_raw" / "granular"

@@ -1,8 +1,8 @@
 CAPSTONE - STAGE 1 DATA PREPARATION SUMMARY
 ============================================================
 
-Manifest source: C:\Users\admin\Desktop\CAPSTONE GAME TIME\manifest file\run_activities_manifest.csv
-Granular root: C:\Users\admin\Desktop\CAPSTONE GAME TIME\00_raw\granular
+Manifest source: C:\Users\ACER\Desktop\CAPSTONE GAME TIME\manifest file\run_activities_manifest.csv
+Granular root: C:\Users\ACER\Desktop\CAPSTONE GAME TIME\00_raw\granular
 
 FILTERING
 ------------------------------------------------------------

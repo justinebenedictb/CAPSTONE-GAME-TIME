@@ -1,4 +1,4 @@
-r"""
+"""
 03_stage1_data_preparation.py
 
 CAPSTONE
@@ -27,7 +27,7 @@ Confirmed granular schema:
     alt
 
 Project root:
-    C:\Users\admin\Desktop\CAPSTONE GAME TIME
+    C:\\Users\\ACER\\Desktop\\CAPSTONE GAME TIME
 """
 
 from pathlib import Path
@@ -42,7 +42,7 @@ import pandas as pd
 # CONFIGURATION
 # ============================================================
 
-ROOT = Path(r"C:\Users\admin\Desktop\CAPSTONE GAME TIME")
+ROOT = Path(r"C:\Users\ACER\Desktop\CAPSTONE GAME TIME")
 
 MANIFEST_PATH = ROOT / "manifest file" / "run_activities_manifest.csv"
 GRANULAR_ROOT = ROOT / "00_raw" / "granular"
@@ -1630,4 +1630,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()

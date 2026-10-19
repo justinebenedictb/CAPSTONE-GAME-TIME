@@ -1,0 +1,12 @@
+feature_a,feature_b,spearman_r,dropped,kept,reason
+days_since_last_target_missing,prior_mean_rpc_missing,1.0,prior_mean_rpc_missing,days_since_last_target_missing,days_since_last_target_missing ranks higher (see priority rule)
+last_rpc_missing,days_since_last_target_missing,1.0,days_since_last_target_missing,last_rpc_missing,last_rpc_missing ranks higher (see priority rule)
+has_prior_rpc,last_rpc_missing,-1.0,last_rpc_missing,has_prior_rpc,has_prior_rpc ranks higher (see priority rule)
+mean_ga_speed_28_missing,mean_hr_pct_28_missing,1.0,mean_hr_pct_28_missing,mean_ga_speed_28_missing,mean_ga_speed_28_missing ranks higher (see priority rule)
+acwr,acwr_km,0.9506879846870407,acwr_km,acwr,acwr is a core study variable
+ctl,km_28,0.9469566606855779,km_28,ctl,ctl is a core study variable
+atl,km_7,0.944271545291568,km_7,atl,atl is a core study variable
+acwr_zone,acwr_km_zone,0.9100564393798393,acwr_zone,acwr_km_zone,acwr_km_zone ranks higher (see priority rule)
+ctl,run_days_28,0.8812854983618785,run_days_28,ctl,ctl is a core study variable
+acwr,acwr_km_zone,0.8799743305147536,acwr_km_zone,acwr,acwr is a core study variable
+atl,run_days_7,0.8663552522178429,run_days_7,atl,atl is a core study variable

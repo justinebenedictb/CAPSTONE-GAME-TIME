@@ -1,4 +1,4 @@
-r"""
+"""
 04_stage2_eda.py
 
 CAPSTONE
@@ -56,7 +56,7 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 ROOT = Path(
-    r"C:\Users\admin\Desktop\CAPSTONE GAME TIME"
+    r"C:\Users\ACER\Desktop\CAPSTONE GAME TIME"
 )
 
 INPUT_DIR = ROOT / "01_prepared"

@@ -1,0 +1,10 @@
+prior_mean_rpc
+last_rpc
+mean_ga_speed_28
+best_rpc_90
+mean_hr_pct_28
+ctl
+longest_run_km_28
+atl
+mean_ga_speed_28_missing
+acwr

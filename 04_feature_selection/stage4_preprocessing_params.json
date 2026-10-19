@@ -1,0 +1,26 @@
+{
+  "caps": {
+    "days_since_last_run": 148.10000000000218,
+    "days_since_last_target": 190.96999999999935
+  },
+  "fill": {
+    "acwr": 1.0,
+    "acwr_km": 1.0,
+    "acwr_zone": 1.0,
+    "acwr_km_zone": 1.0,
+    "mean_ga_speed_28": 12.629192448652708,
+    "mean_hr_pct_28": 0.7888242583475369,
+    "last_rpc": 0.49133163141432523,
+    "best_rpc_90": 0.5607613541595725,
+    "days_since_last_target": 3.0,
+    "prior_mean_rpc": 0.4937706447129668
+  },
+  "missing_flags": [
+    "mean_ga_speed_28",
+    "mean_hr_pct_28",
+    "last_rpc",
+    "best_rpc_90",
+    "days_since_last_target",
+    "prior_mean_rpc"
+  ]
+}

@@ -31,7 +31,7 @@ import requests
 # ------------------------------------------------------------
 
 ROOT = Path(
-    r"c:\Users\admin\Desktop\CAPSTONE GAME TIME"
+    r"C:\Users\ACER\Desktop\CAPSTONE GAME TIME"
 )
 
 # Change this if your manifest is somewhere else.

@@ -1,0 +1,6 @@
+﻿__pycache__/
+05_baseline_models/_quick/
+00_raw/athlete_zips/
+data/raw_activities/
+analytical framework for reference/
+logs/*.log

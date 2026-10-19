@@ -1,0 +1,4 @@
+feature_a,feature_b,spearman_r,dropped,kept,reason
+effort_km,distance_km,0.9692949290189724,distance_km,effort_km,effort_km ranks higher (see priority rule)
+acwr,acwr_km,0.9559007550262604,acwr_km,acwr,acwr is a core study variable
+effort_km,moving_time_min,0.8993834211064426,moving_time_min,effort_km,effort_km ranks higher (see priority rule)

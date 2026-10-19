@@ -1,0 +1,11 @@
+is_activity_day
+trimp
+atl
+ctl
+acwr
+acwr_valid
+effort_km
+ga_speed_kmh
+hr_pct_max
+run_count
+days_since_previous_activity

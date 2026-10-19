@@ -1,0 +1,54 @@
+CAPSTONE - STAGE 5 BASELINE MODEL TRAINING SUMMARY
+============================================================
+
+DATA (validation only - test set reserved for Stage 7)
+------------------------------------------------------------
+Train: 10,431 samples, 329 athletes | Validation: 1,353 samples, 216 athletes
+XGBoost features (full, 10): prior_mean_rpc, last_rpc, mean_ga_speed_28, best_rpc_90, mean_hr_pct_28, ctl, longest_run_km_28, atl, mean_ga_speed_28_missing, acwr
+XGBoost features (no_past_rpc, 7): mean_ga_speed_28, mean_hr_pct_28, ctl, longest_run_km_28, atl, mean_ga_speed_28_missing, acwr
+RNN input (full): (N, 28, 14) - is_activity_day, trimp, atl, ctl, acwr, acwr_valid, effort_km, ga_speed_kmh, hr_pct_max, run_count, days_since_previous_activity, known_rpc, days_since_rpc, mean_rpc_to_date
+RNN input (no_past_rpc): (N, 28, 11)
+
+SETTINGS
+------------------------------------------------------------
+Seeds: [11, 22, 33] | loss: MAE | sample weight: 1 / athlete's sample count
+XGBoost: depth 4, lr 0.05, subsample 0.8, colsample 0.8, up to 1000 trees, early stop 50
+GRU/LSTM: 1 layer x 32 units, dropout 0.2, Dense 16 (ReLU) -> 1, Adam 0.001, batch 64, up to 100 epochs, early stop 10
+
+RESULTS (validation; athlete-weighted unless stated; mean ± SD over seeds)
+------------------------------------------------------------
+Model               Variant       MAE                 RMSE                R2                  MAPE %            Finish-time MAPE*
+lstm                full          0.0370 ± 0.0004     0.0554 ± 0.0004     0.550 ± 0.007       8.62 ± 0.06       7.8 ± 0.1 %
+xgb                 full          0.0371 ± 0.0002     0.0552 ± 0.0004     0.553 ± 0.006       8.66 ± 0.05       7.8 ± 0.0 %
+gru                 full          0.0374 ± 0.0001     0.0556 ± 0.0004     0.548 ± 0.006       8.66 ± 0.05       7.9 ± 0.1 %
+naive_athlete_mean  naive         0.0380              0.0562              0.537               8.77              8.0 %
+xgb                 no_past_rpc   0.0480 ± 0.0002     0.0681 ± 0.0003     0.320 ± 0.006       11.20 ± 0.05      10.1 ± 0.0 %
+naive_last_rpc      naive         0.0494              0.0717              0.246               11.34             10.9 %
+gru                 no_past_rpc   0.0521 ± 0.0012     0.0711 ± 0.0012     0.260 ± 0.025       11.94 ± 0.16      11.2 ± 0.4 %
+lstm                no_past_rpc   0.0529 ± 0.0026     0.0722 ± 0.0030     0.235 ± 0.064       12.15 ± 0.79      11.3 ± 0.4 %
+naive_global_mean   naive         0.0633              0.0841              -0.036              15.22             13.0 %
+* finish-time error at each sample's own best-effort distance, as % of the actual time
+
+Best naive baseline: naive_athlete_mean (MAE 0.0380)
+XGBoost: full 0.0371 (2.3% better than best naive) | without past RPC 0.0480 (past RPC changes MAE by +29.3%)
+GRU: full 0.0374 (1.5% better than best naive) | without past RPC 0.0521 (past RPC changes MAE by +39.2%)
+LSTM: full 0.0370 (2.5% better than best naive) | without past RPC 0.0529 (past RPC changes MAE by +42.8%)
+
+MAE BY BEST-EFFORT DISTANCE (seed-mean predictions; see stage5_metrics_by_distance.csv)
+------------------------------------------------------------
+n per distance: 5 km 856, 10 km 344, 15 km 100, 21.1 km 52, 42.2 km 1
+distance_km           5.0     10.0    15.0    21.1    42.2
+prediction                                                
+gru_full            0.0403  0.0328  0.0295  0.0375  0.0239
+gru_no_past_rpc     0.0510  0.0478  0.0374  0.0520  0.0164
+lstm_full           0.0403  0.0318  0.0287  0.0374  0.0242
+lstm_no_past_rpc    0.0508  0.0491  0.0396  0.0576  0.0078
+naive_athlete_mean  0.0427  0.0349  0.0319  0.0378  0.0130
+naive_global_mean   0.0605  0.0569  0.0497  0.0674  0.0331
+naive_last_rpc      0.0523  0.0487  0.0455  0.0456  0.0721
+xgb_full            0.0405  0.0335  0.0296  0.0362  0.0260
+xgb_no_past_rpc     0.0502  0.0439  0.0322  0.0462  0.0008
+
+STATUS
+------------------------------------------------------------
+Stage 5 baseline training completed. Next: Stage 6 hyperparameter tuning (Random Search).
