@@ -4,3 +4,5 @@
 data/raw_activities/
 analytical framework for reference/
 logs/*.log
+06_tuning/trials/
+06_tuning/_quick/
