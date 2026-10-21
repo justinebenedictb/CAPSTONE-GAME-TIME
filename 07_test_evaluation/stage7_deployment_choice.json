@@ -1,0 +1,9 @@
+{
+  "model": "xgb",
+  "reason": "No RNN is significantly better than XGBoost on test -> XGBoost (simplest model).",
+  "files": [
+    "06_tuning/models/xgb_full_seed11.json",
+    "06_tuning/models/xgb_full_seed22.json",
+    "06_tuning/models/xgb_full_seed33.json"
+  ]
+}

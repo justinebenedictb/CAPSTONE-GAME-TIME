@@ -1,0 +1,80 @@
+CAPSTONE - STAGE 6 HYPERPARAMETER TUNING SUMMARY
+============================================================
+
+METHOD
+------------------------------------------------------------
+Random Search, 40 trials per model x version (trial 0 = Stage 5 setting), seed 11.
+Top 3 trials re-trained with seeds [22, 33]; winner = lowest mean validation MAE over seeds [11, 22, 33].
+Score: validation MAE (RPC, athlete-weighted). Training split for fitting, validation split for early stopping and selection. Test split not used.
+XGBoost: up to 3000 trees, early stop 100, MAE objective.
+GRU/LSTM: up to 150 epochs, early stop 10, MAE loss, output starts at training mean RPC.
+Trials run: 276 model fits, 7.2 h of training in total.
+
+SEARCH SPACE
+------------------------------------------------------------
+XGBoost: max_depth 2-10; learning_rate 0.005-0.3 (log); subsample 0.5-1.0; colsample_bytree 0.5-1.0;
+         min_child_weight 1-50 (log); reg_lambda 0.01-100 (log); reg_alpha {0,1e-4,1e-3,1e-2,0.1};
+         gamma {0,1e-4,1e-3,3e-3}
+GRU/LSTM: units {16,32,64,128}; layers {1,2}; dropout 0-0.4; dense {none,8,16,32};
+          learning_rate 3e-4-3e-3 (log); batch {32,64,128}; L2 {0,1e-6,1e-5,1e-4}
+
+BEST SETTINGS
+------------------------------------------------------------
+XGBoost full: trial 31
+    depth 9, lr 0.0093, subsample 0.61, colsample 0.73, min_child_weight 17.6, lambda 0.011, alpha 0.1, gamma 0.001
+XGBoost no_past_rpc: trial 7
+    depth 9, lr 0.0115, subsample 0.91, colsample 0.62, min_child_weight 5.5, lambda 1.11, alpha 0.01, gamma 0.003
+GRU full: trial 35
+    2 layer(s) x 64 units, dropout 0.27, dense 32, lr 0.00218, batch 64, L2 0.0001
+GRU no_past_rpc: trial 22
+    2 layer(s) x 64 units, dropout 0.10, dense 32, lr 0.00199, batch 32, L2 1e-06
+LSTM full: trial 33
+    2 layer(s) x 32 units, dropout 0.15, dense 16, lr 0.00038, batch 128, L2 0.0001
+LSTM no_past_rpc: trial 34
+    1 layer(s) x 64 units, dropout 0.11, dense 8, lr 0.00149, batch 32, L2 0
+
+RESULTS (validation; athlete-weighted; mean ± SD over seeds)
+------------------------------------------------------------
+Model     Version      Baseline MAE          Tuned MAE             Change    Tuned R2  Finish-time MAPE
+XGBoost   full         0.0371 ± 0.0002       0.0366 ± 0.0001       +1.3%     0.562     7.7 %
+XGBoost   no_past_rpc  0.0480 ± 0.0002       0.0467 ± 0.0002       +2.6%     0.361     9.9 %
+GRU       full         0.0374 ± 0.0001       0.0364 ± 0.0001       +2.8%     0.563     7.7 %
+GRU       no_past_rpc  0.0521 ± 0.0012       0.0496 ± 0.0002       +4.8%     0.313     10.6 %
+LSTM      full         0.0370 ± 0.0004       0.0363 ± 0.0007       +1.9%     0.562     7.6 %
+LSTM      no_past_rpc  0.0529 ± 0.0026       0.0509 ± 0.0004       +3.7%     0.294     10.8 %
+Average of the 3 tuned full models (secondary)MAE 0.0358  R2 0.573
+
+Naive baselines:
+  naive_athlete_mean     MAE 0.0380
+  naive_last_rpc         MAE 0.0494
+  naive_global_mean      MAE 0.0633
+
+Error reduction vs best naive baseline (naive_athlete_mean, MAE 0.0380), tuned full models:
+  xgb                +3.6%
+  gru                +4.2%
+  lstm               +4.4%
+  average_3_models   +5.8%
+(error reduction = (baseline MAE - model MAE) / baseline MAE; positive = better)
+
+MAE BY BEST-EFFORT DISTANCE (seed-mean predictions)
+------------------------------------------------------------
+n per distance: 5 km 856, 10 km 344, 15 km 100, 21.1 km 52, 42.2 km 1
+distance_km           5.0     10.0    15.0    21.1    42.2
+prediction                                                
+average_full        0.0401  0.0316  0.0282  0.0352  0.0199
+gru_full            0.0407  0.0312  0.0285  0.0356  0.0103
+gru_no_past_rpc     0.0488  0.0450  0.0349  0.0444  0.0306
+lstm_full           0.0407  0.0309  0.0286  0.0338  0.0180
+lstm_no_past_rpc    0.0499  0.0439  0.0345  0.0466  0.0332
+naive_athlete_mean  0.0427  0.0349  0.0319  0.0378  0.0130
+naive_global_mean   0.0605  0.0569  0.0497  0.0674  0.0331
+naive_last_rpc      0.0523  0.0487  0.0455  0.0456  0.0721
+xgb_full            0.0400  0.0339  0.0292  0.0369  0.0314
+xgb_no_past_rpc     0.0497  0.0424  0.0323  0.0405  0.0224
+
+NOTE: selection used the validation set, so these validation scores are slightly optimistic;
+the unbiased comparison is the test set (Stage 7).
+
+STATUS
+------------------------------------------------------------
+Stage 6 tuning completed for: gru_full, gru_no_past_rpc, lstm_full, lstm_no_past_rpc, xgb_full, xgb_no_past_rpc. Next: Stage 7 test-set evaluation.

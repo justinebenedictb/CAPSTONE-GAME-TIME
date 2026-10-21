@@ -1,0 +1,135 @@
+CAPSTONE - STAGE 7 TEST-SET EVALUATION SUMMARY
+============================================================
+
+DATA
+------------------------------------------------------------
+Test: 3,090 samples, 216 athletes (first use of the test split; nothing fitted on it).
+Models: tuned (Stage 6) and baseline (Stage 5), each = mean of seeds [11, 22, 33].
+Metrics athlete-weighted (each athlete counts equally) unless stated.
+
+RESULTS (test)
+------------------------------------------------------------
+Prediction                      MAE      RMSE     R2      MAPE %   Finish time       Bias     Per-seed MAE
+tuned_average_full              0.0375   0.0538   0.578   8.74     199 s (8.1%)   +0.0006  
+baseline_xgb_full               0.0379   0.0540   0.574   8.88     198 s (8.1%)   +0.0018  0.0380 ± 0.0001
+tuned_lstm_full                 0.0379   0.0545   0.566   8.83     202 s (8.3%)   +0.0015  0.0384 ± 0.0002
+baseline_lstm_full              0.0379   0.0544   0.567   8.82     202 s (8.3%)   -0.0001  0.0384 ± 0.0001
+tuned_xgb_full                  0.0380   0.0541   0.573   8.91     199 s (8.2%)   +0.0015  0.0380 ± 0.0001
+tuned_gru_full                  0.0380   0.0548   0.562   8.83     203 s (8.3%)   -0.0013  0.0382 ± 0.0004
+naive_running_mean              0.0381   0.0545   0.566   8.92     199 s (8.2%)   +0.0010  
+baseline_gru_full               0.0382   0.0547   0.564   8.79     203 s (8.4%)   -0.0023  0.0391 ± 0.0015
+naive_athlete_mean_trainval     0.0383   0.0551   0.557   8.97     200 s (8.2%)   +0.0013  
+naive_athlete_mean_train        0.0389   0.0557   0.547   9.11     203 s (8.4%)   +0.0017  
+naive_last_rpc                  0.0488   0.0721   0.241   10.87    258 s (10.9%)   +0.0002  
+baseline_xgb_no_past_rpc        0.0499   0.0678   0.329   11.62    258 s (10.8%)   -0.0002  0.0500 ± 0.0001
+tuned_xgb_no_past_rpc           0.0509   0.0688   0.309   11.89    264 s (11.0%)   +0.0001  0.0509 ± 0.0000
+tuned_gru_no_past_rpc           0.0519   0.0692   0.301   12.07    266 s (11.2%)   -0.0009  0.0528 ± 0.0010
+tuned_lstm_no_past_rpc          0.0527   0.0699   0.287   12.23    270 s (11.4%)   -0.0018  0.0535 ± 0.0006
+baseline_gru_no_past_rpc        0.0534   0.0705   0.275   12.33    276 s (11.6%)   -0.0055  0.0542 ± 0.0007
+baseline_lstm_no_past_rpc       0.0539   0.0710   0.264   12.51    279 s (11.6%)   -0.0044  0.0553 ± 0.0018
+naive_global_mean               0.0638   0.0839   -0.027  15.67    319 s (13.1%)   +0.0137  
+
+Naive baselines: naive_athlete_mean_trainval = Athlete average (training + validation) [main]; naive_athlete_mean_train = Athlete average (training only); naive_running_mean = Athlete running average (all earlier results); naive_last_rpc = Last result; naive_global_mean = Overall average (training)
+
+ERROR REDUCTION (test; (baseline MAE - model MAE) / baseline MAE)
+------------------------------------------------------------
+XGBoost  full vs athlete average (train+val) +0.9% | no past perf. vs overall average +20.3% | adding past perf. +25.3% | tuned vs Stage 5 (full) -0.2%
+GRU      full vs athlete average (train+val) +0.8% | no past perf. vs overall average +18.7% | adding past perf. +26.7% | tuned vs Stage 5 (full) +0.4%
+LSTM     full vs athlete average (train+val) +1.1% | no past perf. vs overall average +17.4% | adding past perf. +28.0% | tuned vs Stage 5 (full) +0.1%
+Average of 3 tuned full models vs athlete average (train+val): +2.3%
+
+SIGNIFICANCE (per athlete; diff < 0 = first prediction has lower error; 95% bootstrap CI; Holm-adjusted p within each question)
+------------------------------------------------------------
+Q1 models vs athlete average (train+val) [main]
+  tuned_xgb_full             vs naive_athlete_mean_trainval  diff -0.0004 [-0.0018, +0.0010]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.831  better for 101/216 athletes -> no significant difference
+  tuned_gru_full             vs naive_athlete_mean_trainval  diff -0.0003 [-0.0021, +0.0015]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.826  better for 120/216 athletes -> no significant difference
+  tuned_lstm_full            vs naive_athlete_mean_trainval  diff -0.0004 [-0.0022, +0.0014]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.831  better for 110/216 athletes -> no significant difference
+  tuned_average_full         vs naive_athlete_mean_trainval  diff -0.0009 [-0.0025, +0.0008]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.754  better for 115/216 athletes -> no significant difference
+Q1b models vs athlete average (training only)
+  tuned_xgb_full             vs naive_athlete_mean_train     diff -0.0010 [-0.0024, +0.0005]  p_boot(Holm) 0.562  p_Wilcoxon(Holm) 0.418  better for 109/216 athletes -> no significant difference
+  tuned_gru_full             vs naive_athlete_mean_train     diff -0.0009 [-0.0027, +0.0009]  p_boot(Holm) 0.583  p_Wilcoxon(Holm) 0.204  better for 121/216 athletes -> no significant difference
+  tuned_lstm_full            vs naive_athlete_mean_train     diff -0.0010 [-0.0028, +0.0009]  p_boot(Holm) 0.583  p_Wilcoxon(Holm) 0.214  better for 112/216 athletes -> no significant difference
+  tuned_average_full         vs naive_athlete_mean_train     diff -0.0015 [-0.0031, +0.0002]  p_boot(Holm) 0.336  p_Wilcoxon(Holm) 0.117  better for 125/216 athletes -> no significant difference
+Q1c models vs athlete running average (all earlier results)
+  tuned_xgb_full             vs naive_running_mean           diff -0.0001 [-0.0013, +0.0011]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.998  better for 106/216 athletes -> no significant difference
+  tuned_gru_full             vs naive_running_mean           diff -0.0001 [-0.0017, +0.0016]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.998  better for 114/216 athletes -> no significant difference
+  tuned_lstm_full            vs naive_running_mean           diff -0.0002 [-0.0019, +0.0016]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.998  better for 111/216 athletes -> no significant difference
+  tuned_average_full         vs naive_running_mean           diff -0.0006 [-0.0021, +0.0008]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.688  better for 112/216 athletes -> no significant difference
+Q2 training load only vs simple guesses
+  tuned_xgb_no_past_rpc      vs naive_global_mean            diff -0.0129 [-0.0170, -0.0091]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 139/216 athletes -> significantly lower error
+  tuned_xgb_no_past_rpc      vs naive_last_rpc               diff +0.0020 [-0.0018, +0.0060]  p_boot(Holm) 0.304  p_Wilcoxon(Holm) 1.000  better for 111/216 athletes -> no significant difference
+  tuned_gru_no_past_rpc      vs naive_global_mean            diff -0.0119 [-0.0160, -0.0081]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 139/216 athletes -> significantly lower error
+  tuned_gru_no_past_rpc      vs naive_last_rpc               diff +0.0031 [-0.0010, +0.0072]  p_boot(Holm) 0.281  p_Wilcoxon(Holm) 1.000  better for 115/216 athletes -> no significant difference
+  tuned_lstm_no_past_rpc     vs naive_global_mean            diff -0.0111 [-0.0150, -0.0074]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 129/216 athletes -> significantly lower error
+  tuned_lstm_no_past_rpc     vs naive_last_rpc               diff +0.0039 [-0.0002, +0.0081]  p_boot(Holm) 0.188  p_Wilcoxon(Holm) 1.000  better for 113/216 athletes -> no significant difference
+Q3 ablation: full vs no past performance
+  tuned_xgb_full             vs tuned_xgb_no_past_rpc        diff -0.0129 [-0.0155, -0.0104]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 162/216 athletes -> significantly lower error
+  tuned_gru_full             vs tuned_gru_no_past_rpc        diff -0.0139 [-0.0169, -0.0109]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 159/216 athletes -> significantly lower error
+  tuned_lstm_full            vs tuned_lstm_no_past_rpc       diff -0.0148 [-0.0178, -0.0116]  p_boot(Holm) 0.000  p_Wilcoxon(Holm) 0.000  better for 160/216 athletes -> significantly lower error
+Q4 tuned vs Stage 5 baseline
+  tuned_xgb_full             vs baseline_xgb_full            diff +0.0001 [-0.0004, +0.0005]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 1.000  better for 101/216 athletes -> no significant difference
+  tuned_xgb_no_past_rpc      vs baseline_xgb_no_past_rpc     diff +0.0009 [+0.0002, +0.0017]  p_boot(Holm) 0.062  p_Wilcoxon(Holm) 0.171  better for 98/216 athletes -> no significant difference
+  tuned_gru_full             vs baseline_gru_full            diff -0.0002 [-0.0007, +0.0004]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.224  better for 126/216 athletes -> no significant difference
+  tuned_gru_no_past_rpc      vs baseline_gru_no_past_rpc     diff -0.0015 [-0.0025, -0.0004]  p_boot(Holm) 0.040  p_Wilcoxon(Holm) 0.013  better for 130/216 athletes -> significantly lower error
+  tuned_lstm_full            vs baseline_lstm_full           diff -0.0000 [-0.0005, +0.0004]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 1.000  better for 114/216 athletes -> no significant difference
+  tuned_lstm_no_past_rpc     vs baseline_lstm_no_past_rpc    diff -0.0013 [-0.0025, -0.0000]  p_boot(Holm) 0.179  p_Wilcoxon(Holm) 0.150  better for 124/216 athletes -> no significant difference
+Q5 model vs model (tuned, full)
+  tuned_gru_full             vs tuned_xgb_full               diff +0.0000 [-0.0009, +0.0011]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.157  better for 122/216 athletes -> no significant difference
+  tuned_lstm_full            vs tuned_xgb_full               diff -0.0001 [-0.0010, +0.0010]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.197  better for 121/216 athletes -> no significant difference
+  tuned_lstm_full            vs tuned_gru_full               diff -0.0001 [-0.0005, +0.0004]  p_boot(Holm) 1.000  p_Wilcoxon(Holm) 0.528  better for 114/216 athletes -> no significant difference
+
+DEPLOYMENT MODEL (rule fixed before the test run)
+------------------------------------------------------------
+XGB: No RNN is significantly better than XGBoost on test -> XGBoost (simplest model).
+
+MAE BY BEST-EFFORT DISTANCE (test)
+------------------------------------------------------------
+n per distance: 5 km 2034, 10 km 769, 15 km 196, 21.1 km 83, 42.2 km 8
+distance_km                    5.0     10.0    15.0    21.1    42.2
+prediction                                                         
+tuned_xgb_full               0.0405  0.0351  0.0340  0.0465  0.0568
+tuned_gru_full               0.0402  0.0346  0.0319  0.0460  0.0535
+tuned_lstm_full              0.0401  0.0346  0.0324  0.0455  0.0498
+tuned_average_full           0.0398  0.0344  0.0325  0.0453  0.0529
+naive_athlete_mean_trainval  0.0422  0.0373  0.0369  0.0456  0.0593
+naive_last_rpc               0.0529  0.0483  0.0403  0.0566  0.0513
+naive_global_mean            0.0618  0.0543  0.0561  0.0716  0.1034
+
+REGRESSION TO THE MEAN: mean error (pred - actual) by actual-RPC fifth (test)
+------------------------------------------------------------
+rpc_fifth                    1 slowest       2       3       4  5 fastest
+prediction                                                               
+naive_athlete_mean_trainval     0.0497  0.0193  0.0014 -0.0094    -0.0469
+tuned_average_full              0.0538  0.0193  0.0013 -0.0124    -0.0526
+tuned_gru_full                  0.0521  0.0171  0.0007 -0.0118    -0.0529
+tuned_lstm_full                 0.0536  0.0196  0.0027 -0.0100    -0.0497
+tuned_xgb_full                  0.0559  0.0213  0.0006 -0.0155    -0.0550
+
+ACWR ZONES IN THE TEST PERIOD (descriptive; no injury labels in the data)
+------------------------------------------------------------
+           acwr_type                        zone    n  share_pct  athletes  mean_rpc  mean_rpc_vs_own_average  deployment_model_mae
+HR-load ACWR (TRIMP)       under-training (<0.8)  786    25.4369       150    0.4889                  -0.0004                0.0384
+HR-load ACWR (TRIMP)        sweet spot (0.8-1.3) 1045    33.8188       145    0.4963                  -0.0012                0.0398
+HR-load ACWR (TRIMP)        monitoring (1.3-1.5)  238     7.7023        92    0.4877                   0.0028                0.0365
+HR-load ACWR (TRIMP)              danger (>=1.5)  387    12.5243       119    0.4811                  -0.0082                0.0365
+HR-load ACWR (TRIMP) not enough runs (undefined)  634    20.5178       140    0.4661                  -0.0073                0.0405
+  distance ACWR (km)       under-training (<0.8)  748    24.2071       148    0.4913                   0.0007                0.0384
+  distance ACWR (km)        sweet spot (0.8-1.3) 1087    35.1780       148    0.4960                  -0.0011                0.0398
+  distance ACWR (km)        monitoring (1.3-1.5)  228     7.3786        88    0.4829                   0.0017                0.0364
+  distance ACWR (km)              danger (>=1.5)  393    12.7184       118    0.4796                  -0.0095                0.0366
+  distance ACWR (km) not enough runs (undefined)  634    20.5178       140    0.4661                  -0.0073                0.0405
+
+           acwr_type    n  spearman_vs_rpc  p_vs_rpc  spearman_vs_rpc_relative_to_own_average  p_vs_relative
+HR-load ACWR (TRIMP) 2456          -0.0303    0.1337                                  -0.0329         0.1029
+  distance ACWR (km) 2456          -0.0429    0.0336                                  -0.0375         0.0633
+
+VERDICTS (plain language)
+------------------------------------------------------------
+RQ1 - training load alone: 3 of 6 comparisons (no-past-performance models vs overall average / last result) significantly better.
+RQ1 - full models vs runner's own average (train+val): 0 of 4 significantly better, 0 significantly worse.
+Model comparison: 0 of 3 pairwise differences significant.
+Deployment: XGB.
+
+STATUS
+------------------------------------------------------------
+Stage 7 test evaluation completed (one shot - do not re-tune on these results). Next: Stage 8 interpretation.
