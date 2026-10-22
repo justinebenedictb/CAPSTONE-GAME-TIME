@@ -7,3 +7,4 @@ logs/*.log
 06_tuning/trials/
 06_tuning/_quick/
 07_test_evaluation/_quick/
+08_interpretation/_quick/

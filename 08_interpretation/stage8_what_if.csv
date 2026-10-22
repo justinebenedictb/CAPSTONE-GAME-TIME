@@ -1,0 +1,6 @@
+scenario,mean_rpc_change,median_rpc_change,share_faster_pct,share_unchanged_pct,mean_5k_seconds_change,median_5k_seconds_change
+"Train 20% more (ATL, CTL, longest run x1.2; ACWR unchanged)",0.00081618887,0.00045520067,60.16181229773463,5.016181229773463,-3.339045,-1.3955078
+"Train 20% less (ATL, CTL, longest run x0.8; ACWR unchanged)",-0.00097082625,-0.0007163733,32.23300970873787,4.82200647249191,3.5306969,2.2901611
+"Detraining (ATL, CTL, longest run x0.5; ACWR unchanged)",-0.0037300375,-0.0032399595,18.54368932038835,4.82200647249191,12.261026,10.099609
+Acute spike (ATL x1.5 -> ACWR x1.5; CTL unchanged),-0.00036080726,-0.00014393032,41.90938511326861,4.271844660194175,0.41188928,0.45916748
+Faster training runs (grade-adjusted speed x1.05),0.001547445,0.001147911,72.71844660194175,0.9385113268608414,-5.3760524,-3.7097778

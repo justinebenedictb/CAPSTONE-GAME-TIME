@@ -1,0 +1,48 @@
+=== full model, depth 3 (leaf value = predicted RPC) ===
+|--- prior_mean_rpc <= 0.457
+|   |--- last_rpc <= 0.370
+|   |   |--- mean_ga_speed_28 <= 7.922
+|   |   |   |--- value: [0.311]
+|   |   |--- mean_ga_speed_28 >  7.922
+|   |   |   |--- value: [0.364]
+|   |--- last_rpc >  0.370
+|   |   |--- last_rpc <= 0.415
+|   |   |   |--- value: [0.409]
+|   |   |--- last_rpc >  0.415
+|   |   |   |--- value: [0.442]
+|--- prior_mean_rpc >  0.457
+|   |--- prior_mean_rpc <= 0.506
+|   |   |--- last_rpc <= 0.496
+|   |   |   |--- value: [0.471]
+|   |   |--- last_rpc >  0.496
+|   |   |   |--- value: [0.496]
+|   |--- prior_mean_rpc >  0.506
+|   |   |--- prior_mean_rpc <= 0.576
+|   |   |   |--- value: [0.524]
+|   |   |--- prior_mean_rpc >  0.576
+|   |   |   |--- value: [0.575]
+
+
+=== no_past_rpc model, depth 3 (leaf value = predicted RPC) ===
+|--- mean_ga_speed_28 <= 10.912
+|   |--- mean_ga_speed_28 <= 8.038
+|   |   |--- longest_run_km_28 <= 9.097
+|   |   |   |--- value: [0.284]
+|   |   |--- longest_run_km_28 >  9.097
+|   |   |   |--- value: [0.342]
+|   |--- mean_ga_speed_28 >  8.038
+|   |   |--- mean_ga_speed_28 <= 9.634
+|   |   |   |--- value: [0.383]
+|   |   |--- mean_ga_speed_28 >  9.634
+|   |   |   |--- value: [0.430]
+|--- mean_ga_speed_28 >  10.912
+|   |--- mean_ga_speed_28 <= 12.630
+|   |   |--- longest_run_km_28 <= 11.940
+|   |   |   |--- value: [0.456]
+|   |   |--- longest_run_km_28 >  11.940
+|   |   |   |--- value: [0.485]
+|   |--- mean_ga_speed_28 >  12.630
+|   |   |--- longest_run_km_28 <= 12.013
+|   |   |   |--- value: [0.495]
+|   |   |--- longest_run_km_28 >  12.013
+|   |   |   |--- value: [0.528]

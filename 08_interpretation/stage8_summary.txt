@@ -1,0 +1,113 @@
+CAPSTONE - STAGE 8 INTERPRETATION SUMMARY
+============================================================
+
+Model: XGBoost deployment model (tuned; mean of seeds [11, 22, 33]); test split (3,090 samples, 216 athletes). Base test MAE 0.0380 (training-load-only model 0.0509).
+
+PART A - PLANNED INTERPRETATION
+============================================================
+
+A1 PERMUTATION IMPORTANCE (test; 20 shuffles; MAE increase)
+------------------------------------------------------------
+Full model:
+  Personal average RPC               +0.01661 ± 0.00045  (+43.7% of base MAE)
+  Last RPC                           +0.00529 ± 0.00031  (+13.9% of base MAE)
+  Best RPC (90 d)                    +0.00254 ± 0.00014  (+6.7% of base MAE)
+  Mean grade-adj. speed (28 d)       +0.00222 ± 0.00027  (+5.9% of base MAE)
+  Longest run (28 d)                 +0.00071 ± 0.00012  (+1.9% of base MAE)
+  Mean %HRmax (28 d)                 +0.00028 ± 0.00008  (+0.7% of base MAE)
+  CTL (chronic load)                 +0.00013 ± 0.00004  (+0.3% of base MAE)
+  ACWR                               +0.00007 ± 0.00002  (+0.2% of base MAE)
+  Speed missing flag                 +0.00003 ± 0.00001  (+0.1% of base MAE)
+  ATL (acute load)                   +0.00002 ± 0.00007  (+0.0% of base MAE)
+  GROUP: past performance            +0.03115 ± 0.00087  (+82.0% of base MAE)
+  GROUP: training load               +0.00321 ± 0.00026  (+8.4% of base MAE)
+Training-load-only model:
+  Mean grade-adj. speed (28 d)       +0.01562 ± 0.00078  (+30.7% of base MAE)
+  Longest run (28 d)                 +0.00564 ± 0.00045  (+11.1% of base MAE)
+  CTL (chronic load)                 +0.00109 ± 0.00026  (+2.2% of base MAE)
+  Mean %HRmax (28 d)                 +0.00090 ± 0.00021  (+1.8% of base MAE)
+  Speed missing flag                 +0.00028 ± 0.00003  (+0.6% of base MAE)
+  ATL (acute load)                   +0.00007 ± 0.00017  (+0.1% of base MAE)
+  ACWR                               -0.00003 ± 0.00015  (-0.1% of base MAE)
+  GROUP: training load               +0.02201 ± 0.00080  (+43.3% of base MAE)
+  GROUP: past performance            +0.00000 ± 0.00000  (+0.0% of base MAE)
+
+A2 PARTIAL DEPENDENCE (5th -> 95th percentile of each feature on test)
+------------------------------------------------------------
+  CTL (chronic load)             full         0.333 -> 21.2: RPC +0.0032 (5K -10 s), direction rho +0.37
+  CTL (chronic load)             no_past_rpc  0.333 -> 21.2: RPC -0.0119 (5K +40 s), direction rho -0.78
+  ATL (acute load)               full         0 -> 23.4: RPC +0.0013 (5K -4 s), direction rho +0.36
+  ATL (acute load)               no_past_rpc  0 -> 23.4: RPC +0.0041 (5K -13 s), direction rho +0.12
+  ACWR                           full         0.248 -> 1.95: RPC -0.0003 (5K +1 s), direction rho -0.20
+  ACWR                           no_past_rpc  0.248 -> 1.95: RPC +0.0012 (5K -4 s), direction rho +0.67
+  Mean grade-adj. speed (28 d)   full         9.35 -> 16: RPC +0.0217 (5K -65 s), direction rho +0.94
+  Mean grade-adj. speed (28 d)   no_past_rpc  9.35 -> 16: RPC +0.1092 (5K -271 s), direction rho +1.00
+  Longest run (28 d)             full         2.96 -> 32.4: RPC +0.0125 (5K -38 s), direction rho +0.98
+  Longest run (28 d)             no_past_rpc  2.96 -> 32.4: RPC +0.0643 (5K -177 s), direction rho +0.98
+  Mean %HRmax (28 d)             full         0.609 -> 0.854: RPC +0.0015 (5K -5 s), direction rho +0.25
+  Mean %HRmax (28 d)             no_past_rpc  0.609 -> 0.854: RPC +0.0046 (5K -15 s), direction rho -0.10
+  (rho > 0: higher value -> faster prediction; 5K seconds negative = faster)
+  Caution: ATL, CTL and ACWR are linked (ACWR = ATL/CTL); single-feature PDPs vary one while holding the others fixed.
+
+A3 WHAT-IF SCENARIOS (all test samples; full model)
+------------------------------------------------------------
+  Train 20% more (ATL, CTL, longest run x1.2; ACWR unchanged)        RPC +0.0008 | 5K -3.3 s (median -1.4) | faster for 60%
+  Train 20% less (ATL, CTL, longest run x0.8; ACWR unchanged)        RPC -0.0010 | 5K +3.5 s (median +2.3) | faster for 32%
+  Detraining (ATL, CTL, longest run x0.5; ACWR unchanged)            RPC -0.0037 | 5K +12.3 s (median +10.1) | faster for 19%
+  Acute spike (ATL x1.5 -> ACWR x1.5; CTL unchanged)                 RPC -0.0004 | 5K +0.4 s (median +0.5) | faster for 42%
+  Faster training runs (grade-adjusted speed x1.05)                  RPC +0.0015 | 5K -5.4 s (median -3.7) | faster for 73%
+
+A4 SURROGATE TREES (fit on training-set XGBoost predictions; checked on test)
+------------------------------------------------------------
+    variant  depth  leaves  fidelity_r2_vs_xgboost_test  surrogate_mae_vs_actual_test  xgboost_mae_vs_actual_test
+       full      2       4                       0.8155                        0.0422                      0.0380
+       full      3       8                       0.8858                        0.0406                      0.0380
+       full      4      15                       0.9050                        0.0393                      0.0380
+no_past_rpc      2       4                       0.6981                        0.0531                      0.0509
+no_past_rpc      3       8                       0.7834                        0.0509                      0.0509
+no_past_rpc      4      14                       0.8285                        0.0511                      0.0509
+  Rules (depth 3): stage8_surrogate_rules.txt
+
+PART B - EXPLORATORY CHECKS (added after Stage 7; not pre-specified)
+============================================================
+
+B1 CHANGE TRACKING: predicted vs actual deviation from the runner's average (train+val)
+------------------------------------------------------------
+  XGBoost       r +0.292 [+0.211, +0.368] | within-runner r +0.073 [-0.005, +0.154] | slope 0.81 [0.61, 0.98] | direction right 64% [61, 68] of 2342 calls (|pred. dev| >= 0.005)
+  GRU           r +0.302 [+0.226, +0.378] | within-runner r +0.083 [+0.006, +0.157] | slope 0.71 [0.55, 0.87] | direction right 67% [64, 70] of 2480 calls (|pred. dev| >= 0.005)
+  LSTM          r +0.311 [+0.232, +0.392] | within-runner r +0.093 [+0.014, +0.172] | slope 0.74 [0.58, 0.89] | direction right 66% [63, 69] of 2440 calls (|pred. dev| >= 0.005)
+  Average of 3  r +0.319 [+0.240, +0.396] | within-runner r +0.091 [+0.010, +0.169] | slope 0.84 [0.66, 1.00] | direction right 67% [64, 70] of 2383 calls (|pred. dev| >= 0.005)
+  (athlete-cluster bootstrap 95% CIs; r > 0 and direction > 50% = the model's movements are real;
+   slope 1 = right size, < 1 = actual changes smaller than predicted)
+
+B2 GAIN vs RUNNER HISTORY (gain = runner-average MAE - model MAE, per runner)
+------------------------------------------------------------
+       model       history  spearman_r      p  ci_low  ci_high
+     XGBoost    prior_runs      0.1758 0.0096  0.0475   0.3121
+     XGBoost prior_samples      0.2303 0.0006  0.0998   0.3531
+     XGBoost  test_samples      0.2464 0.0003  0.1107   0.3719
+Average of 3    prior_runs      0.1681 0.0133  0.0309   0.2937
+Average of 3 prior_samples      0.2164 0.0014  0.0876   0.3368
+Average of 3  test_samples      0.2269 0.0008  0.1057   0.3499
+
+       model quartile  athletes prior_runs_range  mean_gain_abs  ci_low  ci_high  mean_gain_pct  share_model_better_pct
+     XGBoost Q1 least        54            10-28        -0.0008 -0.0036   0.0023        -6.1878                 42.5926
+Average of 3 Q1 least        54            10-28        -0.0014 -0.0055   0.0023        -7.3836                 50.0000
+     XGBoost       Q2        54            28-47        -0.0008 -0.0043   0.0027        -8.0552                 38.8889
+Average of 3       Q2        54            28-47         0.0002 -0.0037   0.0044        -6.3773                 44.4444
+     XGBoost       Q3        54           48-101         0.0005 -0.0017   0.0028        -0.4603                 44.4444
+Average of 3       Q3        54           48-101         0.0016 -0.0007   0.0037         2.4790                 55.5556
+     XGBoost  Q4 most        54          101-877         0.0024  0.0008   0.0041         3.3614                 61.1111
+Average of 3  Q4 most        54          101-877         0.0031  0.0013   0.0050         4.7309                 62.9630
+
+B3 EQUIVALENCE WITH THE RUNNER'S AVERAGE (90% bootstrap CI within ±0.002 RPC ≈ ±6 s on a typical 5K; margin chosen after Stage 7)
+------------------------------------------------------------
+       model  mean_diff  ci90_low  ci90_high  margin  equivalent_within_margin  smallest_margin_showing_equivalence
+     XGBoost    -0.0004   -0.0015     0.0008   0.002                      True                               0.0015
+         GRU    -0.0003   -0.0018     0.0012   0.002                      True                               0.0018
+        LSTM    -0.0004   -0.0020     0.0012   0.002                      True                               0.0020
+Average of 3    -0.0009   -0.0022     0.0005   0.002                     False                               0.0022
+
+STATUS
+------------------------------------------------------------
+Stage 8 interpretation completed. Next: Stage 9 deployment.
