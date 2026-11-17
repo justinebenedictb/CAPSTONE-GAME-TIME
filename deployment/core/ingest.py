@@ -274,8 +274,45 @@ def _first(df: pd.DataFrame, *names: str) -> pd.Series:
     return pd.Series(np.nan, index=df.index)
 
 
+# Strava API / third-party layout (snake_case, metres, seconds) -> export column names
+API_TO_EXPORT = {
+    "id": "Activity ID", "name": "Activity Name", "start_date": "Activity Date",
+    "distance": "Distance.1", "moving_time": "Moving Time", "elapsed_time": "Elapsed Time",
+    "total_elevation_gain": "Elevation Gain", "average_speed": "Average Speed",
+    "average_heartrate": "Average Heart Rate", "max_heartrate": "Max Heart Rate",
+    "average_watts": "Average Watts",
+}
+# Never kept: exact start/end coordinates and map polylines reveal where the runner lives
+PRIVATE_COLUMNS = {"start_latlng", "end_latlng", "map", "summary_polyline", "start_latitude",
+                   "start_longitude", "end_latitude", "end_longitude"}
+
+
+def standardize_activity_table(acts: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Return the table in Strava export column names. Accepts the export layout
+    (activities.csv) or the Strava API layout (e.g. the Kaggle demo file)."""
+    acts = acts.drop(columns=[c for c in acts.columns if c.strip().lower() in PRIVATE_COLUMNS])
+    if "Activity Type" in acts.columns and "Activity Date" in acts.columns:
+        return acts, "strava_export"
+    cols = {c.strip(): c for c in acts.columns}
+    if {"start_date", "distance", "moving_time"} <= set(cols) and ({"type", "sport_type"} & set(cols)):
+        out = pd.DataFrame(index=acts.index)
+        for api, exp in API_TO_EXPORT.items():
+            if api in cols:
+                out[exp] = acts[cols[api]]
+        out["Activity Type"] = acts[cols["sport_type"] if "sport_type" in cols else cols["type"]]
+        if "Activity ID" not in out:
+            first = acts.columns[0]
+            out["Activity ID"] = acts[first] if "no" in first.lower() else np.arange(1, len(acts) + 1)
+        out["Filename"] = ""
+        return out, "strava_api"
+    raise ValueError("Unrecognised activity table: expected Strava's activities.csv columns "
+                     "('Activity Date', 'Activity Type', ...) or Strava API columns "
+                     "('start_date', 'distance', 'moving_time', 'type').")
+
+
 def activities_to_manifest(acts: pd.DataFrame, athlete_id: str) -> tuple[pd.DataFrame, dict]:
     """Strava activities.csv (export format) -> manifest-format run rows."""
+    acts, layout = standardize_activity_table(acts)
     if "Activity Type" not in acts.columns or "Activity Date" not in acts.columns:
         raise ValueError("This does not look like a Strava activities file "
                          "(missing 'Activity Type' / 'Activity Date').")
@@ -284,7 +321,8 @@ def activities_to_manifest(acts: pd.DataFrame, athlete_id: str) -> tuple[pd.Data
     info = {"activities_total": int(len(acts)),
             "activity_types": types.value_counts().to_dict(),
             "runs": int(is_run.sum()),
-            "virtual_runs_excluded": int((types == "Virtual Run").sum())}
+            "virtual_runs_excluded": int((types == "Virtual Run").sum()),
+            "table_layout": layout}
     a = acts.loc[is_run].copy()
 
     dt = pd.to_datetime(a["Activity Date"], format="%b %d, %Y, %I:%M:%S %p", errors="coerce", utc=True)

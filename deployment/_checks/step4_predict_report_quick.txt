@@ -5,7 +5,7 @@ A. Likely range (80%) from the Stage 7 test errors -> deployment/models/predicti
   coverage: 80.0% (each runner equal), 79.8% (per sample); by level {'slower third': 0.76, 'middle third': 0.851, 'faster third': 0.802}
 
 B. Stage 7 match: 10 test runners, Strava-style path (raw files -> ingest -> features -> predict)
-  OK  test samples 299 | missing 0 | extra 0 | largest difference 5.55e-17 RPC | dashboard MAE 0.0313 (Stage 7: 0.0380 on all 216 runners) | 43 s
+  OK  test samples 299 | missing 0 | extra 0 | largest difference 5.55e-17 RPC | dashboard MAE 0.0313 (Stage 7: 0.0380 on all 216 runners) | 29 s
 
 C. Demo runner (justinhojt)
   'You now' (2026-11-10, last run 2026-11-09): RPC 0.415 (likely 0.361-0.463)
@@ -22,5 +22,13 @@ C. Demo runner (justinhojt)
     train 20% less               +2.1 s
     detraining (load -50%)      +27.3 s
     training runs 5% faster      -4.7 s
+  training load now: 11.6 km last 7 d, 39.8 km last 28 d, distance ACWR 1.16 (Sweet spot), HR ACWR 1.14
+
+D. Summary-only mode: Strava Running Data.xlsx
+  105 activities -> 94 runs (strava_api layout), 93 kept, 1 excluded as non-run; heart rate: none; 2022-03-16 -> 2023-12-09
+  estimate shown: False | message: A fitness estimate needs at least one best effort (a run of 5 km or more with pe...
+  training load now (2023-12-10): 29.7 km last 7 d, 56.5 km last 28 d, distance ACWR 2.10 (Danger)
+  weekly load trend: 87 weeks; zones {nan: 47, 'Under-training': 14, 'Danger': 12, 'Sweet spot': 9, 'Monitoring': 5}
+  OK  no estimate in summary mode, no coordinates kept
 
 RESULT: ALL GOOD - dashboard predictions reproduce Stage 7

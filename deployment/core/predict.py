@@ -160,14 +160,70 @@ def fmt_time(seconds: float) -> str:
 # Runner-level outputs for the dashboard
 # ============================================================
 
+ZONE_NAMES = {0: "Under-training", 1: "Sweet spot", 2: "Monitoring", 3: "Danger"}
+NO_ESTIMATE_REASON = ("A fitness estimate needs at least one best effort (a run of 5 km or more with "
+                      "per-second data: FIT, GPX or TCX files). This data has no best efforts, so only "
+                      "training load and the injury-risk alert are shown.")
+
+
+def estimate_available(runner: Runner) -> bool:
+    """An estimate is shown only when the runner has at least one valid best effort.
+    Without one, every past-performance input (82% of importance in Stage 8) would be a
+    population fill value, so the number would describe an average runner, not this one."""
+    return len(runner.perf) > 0
+
+
+def _with_prior(f: pd.DataFrame) -> pd.Series:
+    return f["ok"] & (f["prior_rpc_count"].fillna(0) >= 1)
+
+
+def training_load_at(runner: Runner, dates) -> pd.DataFrame:
+    """Training load on each date (= the day before, as the model sees it).
+    Alert measure = distance ACWR (acwr_km), which Stage 3 defined for the alert framework;
+    heart-rate ACWR is reported alongside when the runner has heart-rate data."""
+    dates = pd.to_datetime(pd.Series(list(dates))).dt.normalize()
+    d = runner.daily.set_index("calendar_date")
+    rows = []
+    for t in dates:
+        day = t - pd.Timedelta(days=1)
+        if day not in d.index:
+            rows.append({"date": t})
+            continue
+        r = d.loc[day]
+        z = r["acwr_km_zone"]
+        rows.append({"date": t, "km_7": r["km_7"], "km_28": r["km_28"], "run_days_7": r["run_days_7"],
+                     "run_days_28": r["run_days_28"], "longest_run_km_28": r["longest_run_km_28"],
+                     "acwr_km": r["acwr_km"], "zone": ZONE_NAMES.get(int(z)) if pd.notna(z) else None,
+                     "acwr_hr": r["acwr"], "atl": r["atl"], "ctl": r["ctl"]})
+    out = pd.DataFrame(rows)
+    out["has_hr_load"] = bool(runner.runs["trimp"].notna().any())
+    return out
+
+
+def load_trend(runner: Runner) -> pd.DataFrame:
+    """Weekly training load ending on the 'You now' date (both modes)."""
+    start = runner.first_day + pd.Timedelta(days=27)          # first day with a full 28-day window
+    n = max(0, (runner.you_now_date - start).days // 7 + 1)
+    dates = [runner.you_now_date - pd.Timedelta(days=7 * k) for k in range(n)][::-1]
+    return training_load_at(runner, dates)
+
+
 def you_now(model: DeployedModel, runner: Runner, today=None) -> dict:
     f = runner.features_for_dates([runner.you_now_date])
     today = pd.Timestamp(today or pd.Timestamp.now().normalize())
     out = {"date": runner.you_now_date, "last_run": runner.last_day,
            "days_since_last_run": int((today - runner.last_day).days), "ok": bool(f["ok"].iloc[0])}
+    out["load"] = training_load_at(runner, [runner.you_now_date]).iloc[0].to_dict()
+    if not estimate_available(runner):
+        out.update(ok=False, reason=NO_ESTIMATE_REASON, mode="summary")
+        return out
+    out["mode"] = "full"
     if not out["ok"]:
         out["reason"] = (f"Needs at least {(runner.earliest_estimate_date - runner.first_day).days} days of "
                          f"history (first run {runner.first_day.date()}).")
+        return out
+    if not _with_prior(f).iloc[0]:
+        out.update(ok=False, reason="No best effort before this date yet.")
         return out
     rpc = float(model.predict(f)[0])
     lo, hi = model.with_range([rpc])
@@ -185,7 +241,9 @@ def weekly_trend(model: DeployedModel, runner: Runner) -> pd.DataFrame:
     n = (runner.you_now_date - runner.earliest_estimate_date).days // 7 + 1
     dates = [runner.you_now_date - pd.Timedelta(days=7 * k) for k in range(n)][::-1]
     f = runner.features_for_dates(dates)
-    f = f[f["ok"]].reset_index(drop=True)
+    f = f[_with_prior(f)].reset_index(drop=True)
+    if f.empty:
+        return pd.DataFrame(columns=["date", "rpc", "rpc_lo", "rpc_hi", "acwr", "acwr_zone"])
     rpc = model.predict(f)
     lo, hi = model.with_range(rpc)
     return pd.DataFrame({"date": f["target_date"], "rpc": rpc, "rpc_lo": lo, "rpc_hi": hi,
@@ -198,8 +256,9 @@ def run_day_estimates(model: DeployedModel, runner: Runner) -> pd.DataFrame:
     runs = runner.runs[["file", "calendar_date"]].copy()
     runs["calendar_date"] = pd.to_datetime(runs["calendar_date"])
     f = runner.features_for_dates(runs["calendar_date"].unique())
-    ok = f[f["ok"]].reset_index(drop=True)
-    est = pd.DataFrame({"calendar_date": ok["target_date"]})
+    ok = f[_with_prior(f)].reset_index(drop=True)
+    est = pd.DataFrame({"calendar_date": ok["target_date"], "rpc_est": np.nan, "rpc_est_lo": np.nan,
+                        "rpc_est_hi": np.nan})
     if len(ok):
         est["rpc_est"] = model.predict(ok)
         est["rpc_est_lo"], est["rpc_est_hi"] = model.with_range(est["rpc_est"])
@@ -305,15 +364,47 @@ def _self_check(argv=None) -> int:
                          ("training runs 5% faster", 0, 5)]:
         v = float(model.what_if(f_now, lp, sp)[0])
         say(f"    {name:<26} {time_from_rpc(v, 5.0) - base5:+6.1f} s")
+    ld = now["load"]
+    say(f"  training load now: {ld['km_7']:.1f} km last 7 d, {ld['km_28']:.1f} km last 28 d, distance ACWR "
+        f"{ld['acwr_km']:.2f} ({ld['zone']}), HR ACWR {ld['acwr_hr']:.2f}")
+
+    # ---- summary-only mode (Kaggle) ----
+    ok_d = True
+    kag = sorted((DEP / "demo_data" / "kaggle").glob("*.xls*")) + sorted((DEP / "demo_data" / "kaggle").glob("*.csv"))
     say("")
-    say("RESULT: " + ("ALL GOOD - dashboard predictions reproduce Stage 7" if ok_b else "MISMATCH - send this report"))
+    if kag:
+        try:
+            from .ingest import load_summary_table
+        except ImportError:
+            from ingest import load_summary_table
+        say(f"D. Summary-only mode: {kag[0].name}")
+        ka = load_summary_table(kag[0])
+        kr = build_runner(ka)
+        know = you_now(model, kr, today="2026-11-17")
+        lt = load_trend(kr)
+        say(f"  {ka.report['activities_total']} activities -> {ka.report['runs']} runs ({ka.report['table_layout']} layout), "
+            f"{kr.info['runs']} kept, {kr.info['excluded_as_non_run']} excluded as non-run; heart rate: "
+            f"{'yes' if lt['has_hr_load'].iloc[0] else 'none'}; {kr.first_day.date()} -> {kr.last_day.date()}")
+        say(f"  estimate shown: {know['ok']} | message: {know.get('reason', '')[:80]}...")
+        kl = know["load"]
+        say(f"  training load now ({know['date'].date()}): {kl['km_7']:.1f} km last 7 d, {kl['km_28']:.1f} km last 28 d, "
+            f"distance ACWR {kl['acwr_km']:.2f} ({kl['zone']})")
+        say(f"  weekly load trend: {len(lt)} weeks; zones {lt['zone'].value_counts(dropna=False).to_dict()}")
+        ok_d = (not know["ok"]) and know.get("mode") == "summary" and len(weekly_trend(model, kr)) == 0 \
+            and not any("lat" in c.lower() for c in ka.runs.columns)
+        say(f"  {'OK ' if ok_d else 'BAD'} no estimate in summary mode, no coordinates kept")
+    else:
+        say("D. Summary-only mode: no Kaggle file in deployment/demo_data/kaggle (skipped)")
+    say("")
+    all_ok = ok_b and ok_d
+    say("RESULT: " + ("ALL GOOD - dashboard predictions reproduce Stage 7" if all_ok else "MISMATCH - send this report"))
     out = DEP / "_checks"
     out.mkdir(exist_ok=True)
     tag = "_quick" if args.quick else ""
     (out / f"step4_predict_report{tag}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     m.to_csv(out / f"step4_stage7_match{tag}.csv", index=False)
     print(f"\nSaved: deployment/_checks/step4_predict_report{tag}.txt and deployment/models/{RANGE_FILE}")
-    return 0 if ok_b else 1
+    return 0 if all_ok else 1
 
 
 if __name__ == "__main__":
