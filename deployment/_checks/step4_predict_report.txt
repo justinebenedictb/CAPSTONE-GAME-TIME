@@ -1,0 +1,26 @@
+Stage 9 Step 4 - prediction check
+======================================================================
+A. Likely range (80%) from the Stage 7 test errors -> deployment/models/prediction_range.json
+  actual / predicted between 0.8691 and 1.1152  (times: up to 10.3% faster / 15.1% slower)
+  coverage: 80.0% (each runner equal), 79.8% (per sample); by level {'slower third': 0.76, 'middle third': 0.851, 'faster third': 0.802}
+
+B. Stage 7 match: 216 test runners, Strava-style path (raw files -> ingest -> features -> predict)
+  OK  test samples 3,090 | missing 0 | extra 0 | largest difference 5.55e-17 RPC | dashboard MAE 0.0380 (Stage 7: 0.0380 on all 216 runners) | 464 s
+
+C. Demo runner (justinhojt)
+  'You now' (2026-11-10, last run 2026-11-09): RPC 0.415 (likely 0.361-0.463)
+    5K                30:15   likely 27:08 - 34:48
+    10K             1:03:04   likely 56:33 - 1:12:34
+    Half marathon   2:19:10   likely 2:04:47 - 2:40:07
+    Marathon        4:50:08   likely 4:20:10 - 5:33:50
+  inputs: personal average 0.399 | last 0.387 | best 90 d 0.557 | CTL 4.3 ATL 4.9 ACWR 1.14
+  his actual best efforts in the last 90 days: 10 | median RPC 0.507 | best 0.557
+  weekly trend: 103 points, ends 2026-11-10; last 6: Oct 06 0.451, Oct 13 0.448, Oct 20 0.441, Oct 27 0.454, Nov 03 0.455, Nov 10 0.415
+  run-day estimates: 221/232 runs | on his 62 best-effort days: MAE 0.0413, inside likely range 65%
+  what-if on a 5K (seconds vs now; negative = faster):
+    train 20% more               -6.0 s
+    train 20% less               +2.1 s
+    detraining (load -50%)      +27.3 s
+    training runs 5% faster      -4.7 s
+
+RESULT: ALL GOOD - dashboard predictions reproduce Stage 7

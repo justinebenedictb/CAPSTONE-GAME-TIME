@@ -1,0 +1,18 @@
+Stage 9 Step 3 - runner pipeline check
+======================================================================
+A. GoldenCheetah match check: 10 athletes
+  OK  activities reference rows     625 | missing 0 | extra 0 | mismatched values 0 | largest difference 1.82e-12
+  OK  runs       reference rows     624 | missing 0 | extra 0 | mismatched values 0 | largest difference 1.82e-12
+  OK  samples    reference rows     410 | missing 0 | extra 0 | mismatched values 0 | largest difference 9.09e-13
+  OK  prior      reference rows     410 | missing 0 | extra 0 | mismatched values 0 | largest difference 1.11e-16
+  time: 14 s
+
+B. Demo runner (justinhojt Strava export)
+  {'runs': 232, 'excluded_as_non_run': 0, 'best_effort_days': 64, 'samples': 62, 'trimp_from_hr_stream': 210, 'trimp_estimated_from_avg_hr': 0, 'trimp_missing': 22, 'days': 769, 'seconds_to_build': 2.0}
+  timeline 2024-10-02 -> 2026-11-09 | estimates possible from 2024-11-26 | 'You now' date 2026-11-10
+  best-effort samples: 62 | RPC median 0.382 (5K-equivalent 32.9 min) | distances {5.0: 58, 10.0: 4}
+  'You now' inputs: prior_mean_rpc=0.399, last_rpc=0.387, best_rpc_90=0.557, mean_ga_speed_28=10.889, mean_hr_pct_28=0.790, ctl=4.299, atl=4.882, acwr=1.135, longest_run_km_28=8.435, days_since_last_run=6.000, prior_rpc_count=67.000
+  weekly trend dates: 103 (all with inputs: True)
+  OK  any-date features == best-effort sample features (62 dates, mismatched values 0)
+
+RESULT: ALL GOOD - dashboard pipeline reproduces Stages 1-3 exactly

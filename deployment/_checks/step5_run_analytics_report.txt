@@ -1,0 +1,16 @@
+Stage 9 Step 5 - per-run analytics check
+======================================================================
+Demo runner: 232 runs
+  splits 231 | best efforts 225 | pace/HR chart 231 | map 101 | no map {'Run too short to show the route after hiding 500 m around start and finish.': 117, 'Too little of the route is left after the privacy zones.': 8, 'No GPS in this run.': 6}
+  splits add up to Stage 1 moving time: median difference 0.00 s, largest 39.1 s (standing still after the last metre is not part of a split)
+  best 5K recomputed here vs Stage 1 target: largest difference 0.00e+00 s
+  privacy: closest shown map point to any start/finish = 500 m (must be > 500)
+  time for all runs: 10.9 s
+
+Example run 2026-11-09 'Evening Run': 6.40 km, moving 42.3 min, pace 6.62 min/km, GAP 6.57, HR 162, TRIMP 20.7
+  zones (min): {Z1 5.0, Z2 13.4, Z3 23.8, Z4 0.0, Z5 0.0}
+  splits: 1: 7.08, 2: 6.57, 3: 6.90, 4: 6.27, 5: 6.39, 6: 6.44, 6.4: 6.73
+  best efforts: 1K 6.16 min, 1 mile 10.05 min, 5K 32.46 min (model target, RPC 0.387)
+  map: shown 4.93 of 6.4 km in 1 segment(s)
+
+RESULT: ALL GOOD

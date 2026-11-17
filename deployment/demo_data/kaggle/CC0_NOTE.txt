@@ -1,0 +1,5 @@
+Demo dataset 2: 'Strava Running Activity Data' by ajitjadhav1 on Kaggle.
+https://www.kaggle.com/datasets/ajitjadhav1/strava-running-activity-data
+License: CC0 1.0 Universal (Public Domain Dedication).
+Summary-level activity data (no per-second streams). Used as public secondary data;
+no participants were recruited.

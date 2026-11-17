@@ -1,0 +1,44 @@
+Stage 9 setup  |  2026-11-17 13:28
+Python 3.11.5  |  Windows 10  |  project: C:\Users\ACER\Desktop\CAPSTONE GAME TIME
+======================================================================
+
+[1] Libraries
+  OK   streamlit          1.67.0
+  OK   plotly             7.1.0
+  OK   folium             1.0.0
+  OK   streamlit-folium   0.27.4
+  OK   fitparse           1.2.0
+  OK   gpxpy              1.6.2
+  OK   numpy              2.4.2
+  OK   pandas             3.0.1
+  OK   scipy              1.17.0
+  OK   xgboost            3.2.0
+  OK   openpyxl           3.1.5
+
+[2] Folders
+  ok  deployment/core/
+  ok  deployment/models/
+  ok  deployment/demo_data/
+  ok  deployment/demo_data/kaggle/
+  ok  deployment/.streamlit/
+  ok  deployment/.streamlit/config.toml  (upload limit 1 GB for big Strava exports)
+
+[3] Model files -> deployment/models/
+  ok  xgb_full_seed11.json                         4.93 MB  sha 5e6a0eca9e23855b
+  ok  xgb_full_seed22.json                         4.67 MB  sha 2d2c721c28fd2cc2
+  ok  xgb_full_seed33.json                         4.68 MB  sha a73ad503aaa2506d
+  ok  stage4_preprocessing_params.json             0.00 MB  sha 9d06e2cd9ce46d18
+  ok  stage4_selected_features_tabular.txt         0.00 MB  sha 2aa8e1a34501e5e7
+  Stage 4 params keys: ['caps', 'fill', 'missing_flags']
+  tabular features (10): ['prior_mean_rpc', 'last_rpc', 'mean_ga_speed_28', 'best_rpc_90', 'mean_hr_pct_28', 'ctl', 'longest_run_km_28', 'atl', 'mean_ga_speed_28_missing', 'acwr']
+
+[4] Demo data
+  ok   justinhojt_strava_export.zip  activities.csv=True  activity files=416  LICENSE=True
+  TODO  put the Kaggle xlsx in deployment/demo_data/kaggle/  (not blocking for Steps 2-4)
+
+[5] Pinned requirements
+  ok  requirements.txt             (19 packages)
+  ok  deployment/requirements.txt  (11 packages)
+
+======================================================================
+RESULT: ALL GOOD - ready for Step 2 (ingest)

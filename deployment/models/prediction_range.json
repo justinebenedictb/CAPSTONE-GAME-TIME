@@ -1,0 +1,24 @@
+{
+  "description": "80% likely range: actual best-effort RPC / predicted RPC, 10th-90th percentile on the Stage 7 test set (each runner counts equally). Range = prediction x [lo, hi].",
+  "model": "tuned_xgb_full",
+  "source": "07_test_evaluation/stage7_test_predictions.csv",
+  "quantiles": [
+    0.1,
+    0.9
+  ],
+  "lo": 0.8691074000440705,
+  "hi": 1.1152246264046695,
+  "n_samples": 3090,
+  "n_runners": 216,
+  "coverage_runner_weighted": 0.8,
+  "coverage_per_sample": 0.798,
+  "coverage_by_level_runner_weighted": {
+    "slower third": 0.76,
+    "middle third": 0.851,
+    "faster third": 0.802
+  },
+  "time_range_pct": {
+    "faster_by": 10.3,
+    "slower_by": 15.1
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "created": "2026-11-17T13:28:09",
+  "files": {
+    "xgb_full_seed11.json": {
+      "from": "06_tuning/models/xgb_full_seed11.json",
+      "sha256_16": "5e6a0eca9e23855b",
+      "bytes": 4929711
+    },
+    "xgb_full_seed22.json": {
+      "from": "06_tuning/models/xgb_full_seed22.json",
+      "sha256_16": "2d2c721c28fd2cc2",
+      "bytes": 4668700
+    },
+    "xgb_full_seed33.json": {
+      "from": "06_tuning/models/xgb_full_seed33.json",
+      "sha256_16": "a73ad503aaa2506d",
+      "bytes": 4677423
+    },
+    "stage4_preprocessing_params.json": {
+      "from": "04_feature_selection/stage4_preprocessing_params.json",
+      "sha256_16": "9d06e2cd9ce46d18",
+      "bytes": 637
+    },
+    "stage4_selected_features_tabular.txt": {
+      "from": "04_feature_selection/stage4_selected_features_tabular.txt",
+      "sha256_16": "2aa8e1a34501e5e7",
+      "bytes": 132
+    }
+  }
+}
