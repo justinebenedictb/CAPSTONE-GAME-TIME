@@ -39,9 +39,11 @@ PRIVACY_RADIUS_M = 500
 PRIVACY_TRIM_KM = 0.5
 MIN_ROUTE_KM_AFTER_TRIM = 0.5          # less than this left -> no map
 MAP_MAX_POINTS = 1500                  # downsample for display
-DISPLAY_EFFORTS = {"1K": 1.0, "1 mile": 1.609344, "5K": 5.0, "10K": 10.0,
-                   "Half marathon": 21.0975, "Marathon": 42.195}
-PIPELINE_KEY = {"5K": "5.0", "10K": "10.0", "Half marathon": "21.1", "Marathon": "42.2"}
+SCRUB_MAX_STEPS = 300                  # slider steps per run
+SCRUB_MIN_STEP_KM = 0.05               # every 50 m
+DISPLAY_EFFORTS = {"1K": 1.0, "1 mile": 1.609344, "5K": 5.0, "10K": 10.0, "15K": 15.0,
+                   "Half marathon": 21.0975, "Marathon": 42.195}     # measured inside the run, not estimates
+PIPELINE_KEY = {"5K": "5.0", "10K": "10.0", "15K": "15.0", "Half marathon": "21.1", "Marathon": "42.2"}
 ZONE_LABELS = {"z1": "Z1 Recovery (<65%)", "z2": "Z2 Aerobic (65-80%)", "z3": "Z3 Tempo (80-89%)",
                "z4": "Z4 Threshold (89-97%)", "z5": "Z5 Max (>97%)"}
 PACE_SMOOTH_SEC = 30
@@ -189,21 +191,38 @@ def _dist_m(lat0, lon0, lat, lon):
     return 2 * EARTH_RADIUS_M * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
 
 
-def private_route(ad: AthleteData, file: str) -> dict:
-    """Route for display only. Returns {'ok', 'segments' [list of (lat, lon) arrays], 'reason'}."""
-    g = ad.gps.get(file)
-    if g is None or len(g) < 2:
-        return {"ok": False, "reason": "No GPS in this run.", "segments": []}
-    lat, lon = g["lat"].to_numpy(float), g["lon"].to_numpy(float)
-    good = np.isfinite(lat) & np.isfinite(lon) & (np.abs(lat) > 1e-6)
-    lat, lon = lat[good], lon[good]
-    if len(lat) < 2:
-        return {"ok": False, "reason": "No GPS in this run.", "segments": []}
+def _privacy_mask(lat: np.ndarray, lon: np.ndarray):
+    """True for GPS points that may be shown: not in the first/last 500 m along the route and
+    more than 500 m (straight line) from both the start and the finish. Also returns km along the route."""
     step = _dist_m(lat[:-1], lon[:-1], lat[1:], lon[1:])
     along = np.concatenate([[0.0], np.cumsum(step)]) / 1000
     keep = (along >= PRIVACY_TRIM_KM) & (along <= along[-1] - PRIVACY_TRIM_KM)
     keep &= _dist_m(lat[0], lon[0], lat, lon) > PRIVACY_RADIUS_M
     keep &= _dist_m(lat[-1], lon[-1], lat, lon) > PRIVACY_RADIUS_M
+    return keep, along
+
+
+def _clean_gps(g: pd.DataFrame | None):
+    if g is None or len(g) < 2:
+        return None
+    lat, lon = g["lat"].to_numpy(float), g["lon"].to_numpy(float)
+    good = np.isfinite(lat) & np.isfinite(lon) & (np.abs(lat) > 1e-6)
+    if good.sum() < 2:
+        return None
+    return g.loc[good].reset_index(drop=True)
+
+
+def private_route(ad: AthleteData, file: str, privacy: bool = True) -> dict:
+    """Route for display only. Returns {'ok', 'segments' [list of (lat, lon) arrays], 'reason'}.
+    privacy=True hides 500 m around start and finish; privacy=False shows the full route
+    (demo data, or an upload whose owner chose to see the full route)."""
+    g = _clean_gps(ad.gps.get(file))
+    if g is None:
+        return {"ok": False, "reason": "No GPS in this run.", "segments": []}
+    lat, lon = g["lat"].to_numpy(float), g["lon"].to_numpy(float)
+    keep, along = _privacy_mask(lat, lon)
+    if not privacy:
+        keep = np.ones(len(lat), dtype=bool)
     if keep.sum() < 2:
         return {"ok": False, "reason": "Run too short to show the route after hiding 500 m around start and finish.",
                 "segments": []}
@@ -217,13 +236,94 @@ def private_route(ad: AthleteData, file: str) -> dict:
             continue
         shown_km += along[part[-1]] - along[part[0]]
         segments.append(part)
-    if shown_km < MIN_ROUTE_KM_AFTER_TRIM:
+    if privacy and shown_km < MIN_ROUTE_KM_AFTER_TRIM:
         return {"ok": False, "reason": "Too little of the route is left after the privacy zones.", "segments": []}
     total_pts = sum(len(p) for p in segments)
     stride = max(1, int(np.ceil(total_pts / MAP_MAX_POINTS)))
     segs = [np.column_stack([lat[p][::stride], lon[p][::stride]]) for p in segments]
     return {"ok": True, "segments": segs, "shown_km": round(shown_km, 2), "total_km": round(along[-1], 2),
             "reason": ""}
+
+
+def route_track(ad: AthleteData, file: str, privacy: bool = True) -> pd.DataFrame:
+    """GPS points with their distance into the run (Stage 1 km) and smoothed pace, and whether
+    they may be shown (privacy zones). Display only; never stored."""
+    cols = ["lat", "lon", "km", "pace_s_per_km", "visible"]
+    g = _clean_gps(ad.gps.get(file))
+    s = ad.streams.get(file)
+    c = _clock(s) if s is not None else None
+    if g is None or c is None:
+        return pd.DataFrame(columns=cols)
+    lat, lon = g["lat"].to_numpy(float), g["lon"].to_numpy(float)
+    if privacy:
+        keep, _ = _privacy_mask(lat, lon)
+        if keep.sum() < 2 or private_route(ad, file)["ok"] is False:
+            keep = np.zeros(len(lat), dtype=bool)      # same "no map" rule as private_route
+    else:
+        keep = np.ones(len(lat), dtype=bool)
+    km = np.interp(g["secs"].to_numpy(float), c["secs"].to_numpy(float), c["km"].to_numpy(float))
+    ser = pace_hr_series(ad, file, every_s=1).dropna(subset=["pace_s_per_km"])
+    pace = np.interp(km, ser["km"].to_numpy(float), ser["pace_s_per_km"].to_numpy(float)) if len(ser) else np.full(len(km), np.nan)
+    return pd.DataFrame({"lat": lat, "lon": lon, "km": km, "pace_s_per_km": pace, "visible": keep})
+
+
+def scrub_steps(ad: AthleteData, file: str, privacy: bool = True) -> pd.DataFrame:
+    """One row per slider step (every 50 m, at most SCRUB_MAX_STEPS steps): distance, moving time,
+    pace, HR, elevation at that point, and the map marker position. The marker is always an actual
+    visible GPS point (outside the privacy zones); inside a zone it is None and hidden=True."""
+    cols = ["km", "moving_s", "pace_s_per_km", "hr", "alt", "lat", "lon", "hidden"]
+    s = ad.streams.get(file)
+    c = _clock(s) if s is not None else None
+    if c is None or c["km"].iloc[-1] < 0.1:
+        return pd.DataFrame(columns=cols)
+    total = float(c["km"].iloc[-1])
+    step = max(SCRUB_MIN_STEP_KM, total / SCRUB_MAX_STEPS)
+    grid = np.arange(0.0, total, step)
+    grid = np.append(grid, total)
+    gk, first = np.unique(c["km"].to_numpy(), return_index=True)
+    moving = np.interp(grid, gk, c["moving_s"].to_numpy()[first])
+    ser = pace_hr_series(ad, file, every_s=1)
+
+    def at(col, max_gap_km=0.15):
+        v = ser.dropna(subset=[col])
+        if len(v) < 2:
+            return np.full(len(grid), np.nan)
+        x = v["km"].to_numpy(float)
+        out = np.interp(grid, x, v[col].to_numpy(float))
+        i = np.clip(np.searchsorted(x, grid), 1, len(x) - 1)
+        near = np.minimum(np.abs(x[i] - grid), np.abs(x[i - 1] - grid))
+        out[near > max_gap_km] = np.nan                # no value invented across a pause or gap
+        return out
+
+    out = pd.DataFrame({"km": grid, "moving_s": moving, "pace_s_per_km": at("pace_s_per_km"),
+                        "hr": at("hr"), "alt": at("alt", 0.5)})
+    tr = route_track(ad, file, privacy)
+    out["lat"], out["lon"], out["hidden"] = None, None, False
+    if len(tr):
+        tk = tr["km"].to_numpy(float)
+        order = np.argsort(tk, kind="stable")
+        tk = tk[order]
+        j = np.clip(np.searchsorted(tk, grid), 1, len(tk) - 1)
+        nearest = np.where(np.abs(tk[j] - grid) < np.abs(tk[j - 1] - grid), j, j - 1)
+        idx = order[nearest]
+        close = np.abs(tr["km"].to_numpy(float)[idx] - grid) <= max(step, 0.03)
+        vis = tr["visible"].to_numpy(bool)[idx]
+        lat, lon = tr["lat"].to_numpy(float)[idx], tr["lon"].to_numpy(float)[idx]
+        show = close & vis
+        out["lat"] = [float(a) if ok else None for a, ok in zip(lat, show)]
+        out["lon"] = [float(a) if ok else None for a, ok in zip(lon, show)]
+        out["hidden"] = ~vis
+    return out[cols]
+
+
+def hidden_ranges(steps: pd.DataFrame) -> list[tuple[float, float]]:
+    """Stretches of the run (km) that are inside a privacy zone, for shading the chart."""
+    if steps.empty or not steps["hidden"].any():
+        return []
+    h = steps["hidden"].to_numpy(bool)
+    k = steps["km"].to_numpy(float)
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], h.astype(int), [0]])))
+    return [(float(k[a]), float(k[min(b, len(k) - 1)])) for a, b in zip(edges[::2], edges[1::2])]
 
 
 # ============================================================
@@ -258,6 +358,7 @@ def _self_check(argv=None) -> int:
     problems, n = [], {"splits": 0, "efforts": 0, "chart": 0, "map": 0, "no_map": {}}
     split_diffs, worst_eff = [], 0.0
     min_gap_start = np.inf
+    min_gap_slider = np.inf
     for f in files:
         summ = run_summary(runner, f)
         sp = km_splits(ad, f)
@@ -291,13 +392,55 @@ def _self_check(argv=None) -> int:
                 problems.append(f"{f}: map point within {dmin:.0f} m of start/finish")
         else:
             n["no_map"][rt["reason"]] = n["no_map"].get(rt["reason"], 0) + 1
+        # slider (pass 2): every visible route point and every marker position outside the zones
+        tr = route_track(ad, f)
+        stp = scrub_steps(ad, f)
+        if len(stp):
+            n["scrub"] = n.get("scrub", 0) + 1
+            n["max_steps"] = max(n.get("max_steps", 0), len(stp))
+            if (np.diff(stp["moving_s"].to_numpy(float)) < -1e-9).any():
+                problems.append(f"{f}: slider time goes backwards")
+        g = _clean_gps(ad.gps.get(f))
+        if g is not None:
+            lat0, lon0, lat1, lon1 = g["lat"].iloc[0], g["lon"].iloc[0], g["lat"].iloc[-1], g["lon"].iloc[-1]
+            pts = []
+            if len(tr) and tr["visible"].any():
+                v = tr[tr["visible"]]
+                pts.append(np.column_stack([v["lat"], v["lon"]]))
+            if len(stp):
+                m = stp.dropna(subset=["lat"])
+                if len(m):
+                    pts.append(np.column_stack([m["lat"].astype(float), m["lon"].astype(float)]))
+                    n["markers"] = n.get("markers", 0) + len(m)
+                n["hidden_steps"] = n.get("hidden_steps", 0) + int(stp["hidden"].sum())
+            if pts:
+                P = np.vstack(pts)
+                d = min(_dist_m(lat0, lon0, P[:, 0], P[:, 1]).min(), _dist_m(lat1, lon1, P[:, 0], P[:, 1]).min())
+                min_gap_slider = min(min_gap_slider, d)
+                if d <= PRIVACY_RADIUS_M:
+                    problems.append(f"{f}: slider/route point within {d:.0f} m of start/finish")
     say(f"  splits {n['splits']} | best efforts {n['efforts']} | pace/HR chart {n['chart']} | map {n['map']} | "
         f"no map {n['no_map']}")
     sd = np.array(split_diffs) if split_diffs else np.array([0.0])
     say(f"  splits add up to Stage 1 moving time: median difference {np.median(sd):.2f} s, largest {sd.max():.1f} s "
         f"(standing still after the last metre is not part of a split)")
     say(f"  best 5K recomputed here vs Stage 1 target: largest difference {worst_eff:.2e} s")
-    say(f"  privacy: closest shown map point to any start/finish = {min_gap_start:.0f} m (must be > {PRIVACY_RADIUS_M})")
+    say(f"  privacy: closest shown map point to any start/finish = {min_gap_start:.1f} m (must be > {PRIVACY_RADIUS_M})")
+    say(f"  slider: {n.get('scrub', 0)} runs, up to {n.get('max_steps', 0)} steps; {n.get('markers', 0)} marker positions "
+        f"shown, {n.get('hidden_steps', 0)} steps hidden in privacy zones; closest marker/route point to any "
+        f"start/finish = {min_gap_slider:.1f} m (must be > {PRIVACY_RADIUS_M})")
+    full = {"map": 0, "hidden_steps": 0, "markers": 0}
+    for f in files:
+        if private_route(ad, f, privacy=False)["ok"]:
+            full["map"] += 1
+        stp = scrub_steps(ad, f, privacy=False)
+        if len(stp):
+            full["hidden_steps"] += int(stp["hidden"].sum())
+            full["markers"] += int(stp["lat"].notna().sum())
+    say(f"  full-route setting (demos, or uploads that choose it): map {full['map']} runs, "
+        f"{full['markers']} marker positions, steps hidden {full['hidden_steps']} (must be 0)")
+    if full["hidden_steps"]:
+        problems.append("full-route setting still hides steps")
     say(f"  time for all runs: {time.time() - t0:.1f} s")
     # example: most recent run with a 5K best effort
     ex = runner.activity[runner.activity["target_5_0km_status"].eq("OK")]["file"].iloc[-1]

@@ -41,7 +41,9 @@ SEEDS = (11, 22, 33)
 RANGE_FILE = "prediction_range.json"
 RANGE_QUANTILES = (0.10, 0.90)          # 80% range
 
-DISTANCES = {"5K": 5.0, "10K": 10.0, "Half marathon": 21.0975, "Marathon": 42.195}
+# Distances shown on the estimate card: all have real best-effort targets in training, validation and test.
+# The marathon is not shown (8 test samples; Riegel tends to be optimistic for recreational marathons).
+DISTANCES = {"5K": 5.0, "10K": 10.0, "15K": 15.0, "Half marathon": 21.0975}
 
 # Stage 8 what-if scaling (10_stage8_interpretation.what_if)
 LOAD_FEATURES = ["atl", "ctl", "longest_run_km_28"]      # ACWR = ATL/CTL unchanged
@@ -135,6 +137,16 @@ class DeployedModel:
             X[c] = X[c] * (1 + load_pct / 100)
         for c in SPEED_FEATURES:
             X[c] = X[c] * (1 + speed_pct / 100)
+        return self.predict_prepared(X)
+
+    def volume_curve(self, feats: pd.DataFrame, pcts) -> np.ndarray:
+        """Sensitivity panel: predicted RPC with training volume scaled by each % in pcts (one batch).
+        Scales acute and chronic load and the longest run together (ACWR unchanged); everything else fixed."""
+        X = self.prepare(feats.iloc[[0]])
+        X = pd.concat([X] * len(pcts), ignore_index=True)
+        f = 1 + np.asarray(pcts, float) / 100
+        for c in LOAD_FEATURES:
+            X[c] = X[c].to_numpy(float) * f
         return self.predict_prepared(X)
 
 
