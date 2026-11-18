@@ -1,0 +1,9 @@
+case,expected,observed,pass
+No heart-rate data,estimate still shown; HR load and HR ACWR marked unavailable; distance ACWR shown,estimate shown True (5K 30:10); HR training load missing on 232/232 runs; distance ACWR 1.16 still shown; HR ACWR not shown,True
+Short history (< 55 days),no estimate; message says how much history is needed,"9 runs over 40 days -> no estimate, message: ""Needs at least 55 days of history (first run 2024-10-02).""",True
+Corrupt file and file missing from ZIP,runs kept as summary-only with a reason; app keeps working,"all 232 runs kept; corrupt file -> ""gpx: GPXXMLSyntaxException"", missing file -> ""file missing from ZIP"" (both kept as summary-only); estimate still shown",True
+ZIP without activities.csv,"clear error message, no crash","friendly error: ""No activities.csv found. Upload the ZIP from Strava's 'Download or Delete Your Account' > 'Request your archive'.""",True
+Wrong table uploaded,"clear error message, no crash","friendly error: ""Unrecognised activity table: expected Strava's activities.csv columns ('Activity Date', 'Activity Type', ...) """,True
+Treadmill run (Virtual Run),not counted as a run,1 Virtual Run excluded; runs 232 (= demo 232),True
+Activity list only (Kaggle demo),no estimate; training load and ACWR alert shown,"94 runs, no per-second files -> no estimate (message shown); distance ACWR 2.10 (Danger); weekly load trend 87 weeks",True
+Stale data (last run 40 days ago),warning shown; estimate keeps its own date,opened 40 days after the last run -> stale warning (> 28 days); estimate stays dated 2026-11-10,True

@@ -1,0 +1,41 @@
+Stage 9 - technical evaluation of the RunState dashboard
+==============================================================================
+Deployed model: tuned XGBoost 'full', mean of seeds (11, 22, 33); 10 inputs; likely range x0.8691 - x1.1152
+
+A. ACCURACY - 216 test runners through the dashboard path (raw files -> reader -> Stages 1-3 for one runner -> deployed model)
+  OK  test samples 3,090 | missing 0 | extra 0 | largest difference 5.55e-17 RPC
+  dashboard MAE 0.0380 RPC (each runner equal; Stage 7 reported 0.0380 on all 216 runners) (average 5K time error about 148 s)
+  likely range (80%) covers 80.0% of test best efforts (each runner equal) | 735 s
+
+B. EDGE CASES
+  OK  No heart-rate data: estimate shown True (5K 30:10); HR training load missing on 232/232 runs; distance ACWR 1.16 still shown; HR ACWR not shown
+  OK  Short history (< 55 days): 9 runs over 40 days -> no estimate, message: "Needs at least 55 days of history (first run 2024-10-02)."
+  OK  Corrupt file and file missing from ZIP: all 232 runs kept; corrupt file -> "gpx: GPXXMLSyntaxException", missing file -> "file missing from ZIP" (both kept as summary-only); estimate still shown
+  OK  ZIP without activities.csv: friendly error: "No activities.csv found. Upload the ZIP from Strava's 'Download or Delete Your Account' > 'Request your archive'."
+  OK  Wrong table uploaded: friendly error: "Unrecognised activity table: expected Strava's activities.csv columns ('Activity Date', 'Activity Type', ...) "
+  OK  Treadmill run (Virtual Run): 1 Virtual Run excluded; runs 232 (= demo 232)
+  OK  Activity list only (Kaggle demo): 94 runs, no per-second files -> no estimate (message shown); distance ACWR 2.10 (Danger); weekly load trend 87 weeks
+  OK  Stale data (last run 40 days ago): opened 40 days after the last run -> stale warning (> 28 days); estimate stays dated 2026-11-10
+  8/8 edge cases behave as designed
+
+C. ACWR ALERT LOGIC
+  OK  zone boundaries: < 0.8 Under-training | 0.8-1.3 Sweet spot | 1.3-1.5 Monitoring | >= 1.5 Danger (10 values incl. the exact boundaries)
+  OK  Demo 1 (justinhojt): 713 days with distance ACWR, 29 days with < 4 run days -> no ACWR; zones {'Sweet spot': 349, 'Under-training': 213, 'Danger': 97, 'Monitoring': 54}
+  OK  Demo 2 (Kaggle): 291 days with distance ACWR, 316 days with < 4 run days -> no ACWR; zones {'Under-training': 101, 'Danger': 84, 'Sweet spot': 63, 'Monitoring': 43}
+
+D. PRIVACY (route map)
+  OK  Hide on (upload default): 101 of 226 GPS runs have a map; closest point sent to the browser 500.1 m from a start/finish (rule: > 500 m)
+      Show full route (demo data): 226 of 226 GPS runs have a map
+  OK  activity list (Kaggle): coordinate columns in the file ['start_latlng', 'end_latlng'] -> kept after loading: none
+
+E. SPEED (this computer)
+  Demo 1 (full): read export ZIP                         42.43 s  232 runs, 231 files
+  Demo 1: Stages 1-3 for one runner                       1.70 s  
+  Demo 1: You now + weekly trend + run-day estimates      0.69 s  103 trend points, 232 runs
+  Demo 1: sensitivity curve (13 settings)                 0.02 s  
+  Demo 1: open one run (stats, splits, best efforts, map)    0.08 s  median of 30 runs, slowest 0.13 s
+  Demo 1: first load in total (read + build + estimate)   44.82 s  
+  Demo 2 (activity list): read + build + load trend       0.25 s  94 runs
+  Note: the browser also loads the map library and map tiles; slider movement runs in the browser and needs no server work.
+
+RESULT: ALL GOOD  (A accuracy OK, B edge cases OK, C ACWR OK, D privacy OK; E speed is descriptive)  | 1009 s
