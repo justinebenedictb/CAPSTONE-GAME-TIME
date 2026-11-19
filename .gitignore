@@ -10,3 +10,6 @@ logs/*.log
 08_interpretation/_quick/
 
 __pycache__/
+# local tool settings (not part of the project)
+.agents/
+.claude/
